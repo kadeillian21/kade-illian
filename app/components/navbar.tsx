@@ -114,6 +114,18 @@ const Navbar = () => {
               )}
             </li>
             
+            {/* Markdown */}
+            <li>
+              <Link href="/markdown" className={cn(
+                "flex items-center px-4 py-2 text-sm font-medium transition-colors rounded-full",
+                pathname === "/markdown" 
+                  ? "bg-gray-100 text-gray-900" 
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              )}>
+                Markdown
+              </Link>
+            </li>
+            
             {/* About Me */}
             <li>
               <Link href="/about" className={cn(
