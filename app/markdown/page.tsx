@@ -114,6 +114,34 @@ export default function MarkdownPage() {
             background-color: #f5f5f5 !important;
             font-weight: bold;
           }
+          .print-area input[type="checkbox"] {
+            width: 16px !important;
+            height: 16px !important;
+            margin-right: 8px !important;
+            vertical-align: middle !important;
+            border: 2px solid #000 !important;
+            background: white !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            position: relative !important;
+            cursor: pointer !important;
+          }
+          .print-area input[type="checkbox"]:checked {
+            background: white !important;
+            border: 2px solid #000 !important;
+          }
+          .print-area input[type="checkbox"]:checked::after {
+            content: "" !important;
+            position: absolute !important;
+            top: 2px !important;
+            left: 4px !important;
+            width: 4px !important;
+            height: 8px !important;
+            border: solid #000 !important;
+            border-width: 0 2px 2px 0 !important;
+            transform: rotate(45deg) !important;
+          }
         }
         
         @media screen {
