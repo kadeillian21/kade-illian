@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sage-green: #6b7d6a;
+  --sage-dark: #4a5d49;
+  --sage-light: #8a9a8a;
+  --tan: #d4c5b0;
+  --cream: #f5f1e8;
 }
 
 @theme inline {
@@ -10,6 +15,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-hebrew: var(--font-hebrew);
+}
+
+/* Hebrew text styling */
+.hebrew-text {
+  font-family: var(--font-hebrew), 'Frank Ruhl Libre', serif;
+  direction: rtl;
+  font-feature-settings: "dlig" 1;
 }
 
 body {
@@ -24,12 +37,43 @@ body {
   to { opacity: 1; }
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.6s ease-out;
+}
+
+.animate-gradient {
+  animation: gradient 8s ease infinite;
+  background-size: 200% 200%;
 }
 
 .transition-all {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }

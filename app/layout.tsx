@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono, Frank_Ruhl_Libre } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/navbar";
 
@@ -12,6 +12,13 @@ const inter = Inter({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const frankRuhl = Frank_Ruhl_Libre({
+  variable: "--font-hebrew",
+  subsets: ["latin", "hebrew"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -29,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body
-        className={`${inter.variable} ${geistMono.variable} font-sans antialiased text-gray-900 bg-white`}
+        className={`${inter.variable} ${geistMono.variable} ${frankRuhl.variable} font-sans antialiased text-gray-900 bg-white`}
         suppressHydrationWarning
       >
         <Navbar />

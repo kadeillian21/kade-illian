@@ -50,7 +50,7 @@ const RiskLegend = () => {
                 <span className="text-sm text-gray-700">Moderate Risk (4)</span>
               </div>
               <div className="flex items-center">
-                <div className="w-6 h-6 rounded-full bg-purple-500 mr-3"></div>
+                <div className="w-6 h-6 rounded-full bg-[#f5f1e8]0 mr-3"></div>
                 <span className="text-sm text-gray-700">High Risk (5)</span>
               </div>
             </div>

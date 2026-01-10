@@ -32,7 +32,7 @@ const VeraYieldPage = () => {
             Our data-driven approach identifies optimal investment opportunities.
           </p>
           
-          <div className="border-l-4 border-purple-500 pl-4 py-2 bg-purple-50 text-left mb-6">
+          <div className="border-l-4 border-purple-500 pl-4 py-2 bg-[#f5f1e8] text-left mb-6">
             <p className="text-gray-800 italic">
               "Modern investing for sustainable growth and reliable yields."
             </p>
