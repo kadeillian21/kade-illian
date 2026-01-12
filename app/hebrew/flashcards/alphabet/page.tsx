@@ -152,7 +152,7 @@ export default function AlphabetFlashcards() {
             {!isFlipped ? (
               // Front of card
               <div className="p-12 text-center">
-                <div className="text-8xl md:text-9xl font-bold font-[family-name:var(--font-hebrew)] bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent mb-6">
+                <div className="text-8xl md:text-9xl font-bold font-[family-name:var(--font-hebrew)] bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent mb-6 leading-[1.4] pb-4">
                   {currentCard.char}
                 </div>
                 <div className="text-gray-400 italic text-lg">
