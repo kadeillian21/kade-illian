@@ -1,5 +1,8 @@
 "use client";
 
+// NOTE: Hebrew words should be selectable/copyable so users can look them up
+// Avoid using bg-clip-text on Hebrew text as it clips diacritical marks (nikkud)
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -178,7 +181,10 @@ export default function VocabularyFlashcards() {
               <div className="p-12 text-center">
                 {mode === 'hebrew-to-english' ? (
                   <>
-                    <div className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent mb-4">
+                    <div
+                      className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {currentCard.hebrew}
                     </div>
                     <div className="text-2xl text-gray-500 italic mb-6">
@@ -197,7 +203,10 @@ export default function VocabularyFlashcards() {
             ) : (
               // Back of card
               <div className="p-12 text-center">
-                <div className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                <div
+                  className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {mode === 'hebrew-to-english' ? currentCard.english : currentCard.hebrew}
                 </div>
                 {mode === 'english-to-hebrew' && (
