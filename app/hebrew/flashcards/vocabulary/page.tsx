@@ -180,17 +180,12 @@ export default function VocabularyFlashcards() {
               // Front of card
               <div className="p-12 text-center">
                 {mode === 'hebrew-to-english' ? (
-                  <>
-                    <div
-                      className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {currentCard.hebrew}
-                    </div>
-                    <div className="text-2xl text-gray-500 italic mb-6">
-                      {currentCard.trans}
-                    </div>
-                  </>
+                  <div
+                    className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {currentCard.hebrew}
+                  </div>
                 ) : (
                   <div className="text-5xl md:text-6xl font-bold text-gray-900">
                     {currentCard.english}
@@ -209,11 +204,9 @@ export default function VocabularyFlashcards() {
                 >
                   {mode === 'hebrew-to-english' ? currentCard.english : currentCard.hebrew}
                 </div>
-                {mode === 'english-to-hebrew' && (
-                  <div className="text-2xl text-gray-600 italic mb-4">
-                    ({currentCard.trans})
-                  </div>
-                )}
+                <div className="text-2xl text-gray-600 italic mb-4">
+                  ({currentCard.trans})
+                </div>
                 <div className="text-lg text-gray-700 font-medium mb-4">
                   {currentCard.type}
                 </div>
