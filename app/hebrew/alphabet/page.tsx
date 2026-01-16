@@ -113,13 +113,13 @@ export default function AlphabetFlashcards() {
           {/* Header */}
           <div className="text-center mb-8">
             <Link
-              href="/hebrew/flashcards"
+              href="/hebrew"
               className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to Flashcards
+              Back to Hebrew
             </Link>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">

@@ -137,15 +137,28 @@ const Navbar = () => {
                 <div className="absolute right-0 z-50 min-w-[12rem] overflow-hidden rounded-lg border border-gray-200 bg-white p-1 shadow-xl mt-1">
                   <div className="relative cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[#f5f1e8]">
                     <Link
-                      href="/hebrew/flashcards"
+                      href="/hebrew/alphabet"
                       className={cn(
                         "w-full flex items-center rounded-md px-2 py-1.5 transition-colors",
-                        pathname.includes("flashcards")
+                        pathname.includes("alphabet")
                           ? "font-medium text-[#4a5d49]"
                           : "text-gray-600 hover:text-[#4a5d49]"
                       )}
                     >
-                      Flashcards
+                      Alphabet
+                    </Link>
+                  </div>
+                  <div className="relative cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-50">
+                    <Link
+                      href="/hebrew/syllables"
+                      className={cn(
+                        "w-full flex items-center rounded-md px-2 py-1.5 transition-colors",
+                        pathname.includes("syllables")
+                          ? "font-medium text-[#4a5d49]"
+                          : "text-gray-600 hover:text-[#4a5d49]"
+                      )}
+                    >
+                      Syllables
                     </Link>
                   </div>
                   <div className="relative cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-50">

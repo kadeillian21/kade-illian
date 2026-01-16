@@ -21,20 +21,36 @@ export default function HebrewPage() {
           </div>
 
           {/* Resource Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Flashcards Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Alphabet Card */}
             <a
-              href="/hebrew/flashcards"
+              href="/hebrew/alphabet"
               className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 p-8"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform">
-                🎴
+              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-md group-hover:scale-110 transition-transform mx-auto">
+                א
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#4a5d49] transition-colors">
-                Flashcards
+              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#4a5d49] transition-colors text-center">
+                Alphabet
               </h2>
-              <p className="text-gray-600 leading-relaxed">
-                Practice Hebrew words and phrases with interactive flashcard exercises.
+              <p className="text-gray-600 leading-relaxed text-center">
+                Learn all 41 Hebrew characters, vowels, and pronunciation
+              </p>
+            </a>
+
+            {/* Syllables Card */}
+            <a
+              href="/hebrew/syllables"
+              className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 p-8"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform mx-auto">
+                🎯
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#6b7d6a] transition-colors text-center">
+                Syllables
+              </h2>
+              <p className="text-gray-600 leading-relaxed text-center">
+                Practice dividing Hebrew words into syllables
               </p>
             </a>
 
@@ -43,14 +59,14 @@ export default function HebrewPage() {
               href="/hebrew/vocabulary"
               className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 p-8"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform mx-auto">
                 📚
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#6b7d6a] transition-colors">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#6b7d6a] transition-colors text-center">
                 Vocabulary
               </h2>
-              <p className="text-gray-600 leading-relaxed">
-                Build your Hebrew vocabulary with organized word lists and meanings.
+              <p className="text-gray-600 leading-relaxed text-center">
+                Genesis 1:1-5 vocabulary with translations and notes
               </p>
             </a>
 
@@ -59,14 +75,14 @@ export default function HebrewPage() {
               href="/hebrew/grammar"
               className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 p-8"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-md group-hover:scale-110 transition-transform mx-auto">
                 📖
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#6b7d6a] transition-colors">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#6b7d6a] transition-colors text-center">
                 Grammar
               </h2>
-              <p className="text-gray-600 leading-relaxed">
-                Master Hebrew grammar rules with clear explanations and examples.
+              <p className="text-gray-600 leading-relaxed text-center">
+                Master Hebrew grammar rules with clear explanations and examples
               </p>
             </a>
           </div>
