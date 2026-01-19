@@ -5,77 +5,215 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress } from './data/types';
+import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
+import { suggestStudyDays } from './utils/organizer';
+import ProgressDashboard from './components/ProgressDashboard';
 
-interface VocabCard {
-  hebrew: string;
-  trans: string;
-  english: string;
-  type: string;
-  notes: string;
-}
+type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
+type FlashcardMode = 'hebrew-to-english' | 'english-to-hebrew';
 
-const vocabulary: VocabCard[] = [
-  // Session 27: Words 1-10
-  { hebrew: 'אֱלֹהִים', trans: 'elohim', english: 'God', notes: 'Plural form, singular meaning', type: 'Noun' },
-  { hebrew: 'שָׁמַיִם', trans: 'shamayim', english: 'heavens, sky', notes: 'Always plural', type: 'Noun' },
-  { hebrew: 'אֶרֶץ', trans: 'erets', english: 'earth, land', notes: 'Very common', type: 'Noun' },
-  { hebrew: 'מַיִם', trans: 'mayim', english: 'water', notes: 'Always plural', type: 'Noun' },
-  { hebrew: 'אוֹר', trans: 'or', english: 'light', notes: 'Noun form', type: 'Noun' },
-  { hebrew: 'חֹשֶׁךְ', trans: 'choshekh', english: 'darkness', notes: '', type: 'Noun' },
-  { hebrew: 'יוֹם', trans: 'yom', english: 'day', notes: 'Also means "time"', type: 'Noun' },
-  { hebrew: 'לַיְלָה', trans: 'laylah', english: 'night', notes: '', type: 'Noun' },
-  { hebrew: 'רָקִיעַ', trans: 'raqia', english: 'expanse, firmament', notes: 'From verb "to spread out"', type: 'Noun' },
-  { hebrew: 'תְּהוֹם', trans: 'tehom', english: 'deep, abyss', notes: 'Primordial waters', type: 'Noun' },
-
-  // Session 28: Words 11-20
-  { hebrew: 'בָּרָא', trans: 'bara', english: 'he created', notes: 'Qal Perfect 3ms - God as subject', type: 'Verb' },
-  { hebrew: 'עָשָׂה', trans: 'asah', english: 'he made, did', notes: 'More common than בָּרָא', type: 'Verb' },
-  { hebrew: 'אָמַר', trans: 'amar', english: 'he said', notes: 'Most frequent verb in Torah', type: 'Verb' },
-  { hebrew: 'רָאָה', trans: 'raah', english: 'he saw', notes: 'III-He weak verb', type: 'Verb' },
-  { hebrew: 'הָיָה', trans: 'hayah', english: 'he was, became', notes: 'Most common Hebrew verb', type: 'Verb' },
-  { hebrew: 'קָרָא', trans: 'qara', english: 'he called, named', notes: '', type: 'Verb' },
-  { hebrew: 'בֵּין', trans: 'beyn', english: 'between', notes: '', type: 'Preposition' },
-  { hebrew: 'עַל', trans: 'al', english: 'upon, over', notes: 'Very common preposition', type: 'Preposition' },
-  { hebrew: 'תַּחַת', trans: 'tachat', english: 'under, beneath', notes: '', type: 'Preposition' },
-  { hebrew: 'כִּי', trans: 'ki', english: 'that, because, when', notes: 'Multi-purpose particle', type: 'Particle' },
-
-  // Session 29: Words 21-30
-  { hebrew: 'טוֹב', trans: 'tov', english: 'good', notes: 'Adjective (very good = טוֹב מְאֹד)', type: 'Adjective' },
-  { hebrew: 'רוּחַ', trans: 'ruach', english: 'spirit, wind, breath', notes: 'Feminine noun', type: 'Noun' },
-  { hebrew: 'פְּנֵי', trans: 'peney', english: 'face, surface', notes: 'Plural construct form', type: 'Noun' },
-  { hebrew: 'בְּרֵאשִׁית', trans: 'bereshit', english: 'in beginning', notes: 'First word of Bible! בְּ (in) + רֵאשִׁית (beginning)', type: 'Noun' },
-  { hebrew: 'תֹּהוּ', trans: 'tohu', english: 'formless, chaos', notes: 'Only with וָבֹהוּ', type: 'Noun' },
-  { hebrew: 'בֹּהוּ', trans: 'vohu', english: 'void, empty', notes: 'Paired expression with תֹּהוּ', type: 'Noun' },
-  { hebrew: 'אֶחָד', trans: 'echad', english: 'one', notes: 'Number (masculine)', type: 'Number' },
-  { hebrew: 'שֵׁנִי', trans: 'sheni', english: 'second', notes: 'Ordinal number', type: 'Number' },
-  { hebrew: 'עֶרֶב', trans: 'erev', english: 'evening', notes: '', type: 'Noun' },
-  { hebrew: 'בֹּקֶר', trans: 'boqer', english: 'morning', notes: '', type: 'Noun' }
-];
-
-type Mode = 'hebrew-to-english' | 'english-to-hebrew';
-
-export default function VocabularyFlashcards() {
-  const [cards, setCards] = useState<VocabCard[]>(vocabulary);
+export default function VocabularyPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>('library');
+  const [vocabSets, setVocabSets] = useState<VocabSet[]>([]);
+  const [activeSetId, setActiveSetIdState] = useState<string>('');
+  const [selectedSet, setSelectedSet] = useState<VocabSet | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<VocabGroup | null>(null);
+  const [flashcardMode, setFlashcardMode] = useState<FlashcardMode>('hebrew-to-english');
+  const [cards, setCards] = useState<HebrewVocabWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [mode, setMode] = useState<Mode>('hebrew-to-english');
+  const [progress, setProgress] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const currentCard = cards[currentIndex];
+  // Helper: Merge progress data with words
+  const mergeProgressWithWords = (words: HebrewVocabWord[]) => {
+    if (!progress || !progress.wordProgress) return words;
 
-  const flipCard = () => {
-    setIsFlipped(!isFlipped);
+    return words.map(word => {
+      const wordProgress = progress.wordProgress[word.id];
+      if (!wordProgress) return word;
+
+      return {
+        ...word,
+        level: wordProgress.level,
+        nextReview: wordProgress.nextReview,
+        lastReviewed: wordProgress.lastReviewed,
+        reviewCount: wordProgress.reviewCount,
+        correctCount: wordProgress.correctCount,
+      };
+    });
   };
 
+  // Load vocab sets and progress from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Fetch vocab sets
+        const setsResponse = await fetch('/api/vocab/sets');
+        const sets = await setsResponse.json();
+        setVocabSets(sets);
+
+        // Set active set (first active one, or first set)
+        const activeSet = sets.find((s: any) => s.isActive) || sets[0];
+        if (activeSet) {
+          setActiveSetIdState(activeSet.id);
+        }
+
+        // Fetch progress
+        const progressResponse = await fetch('/api/vocab/progress');
+        const progressData = await progressResponse.json();
+        setProgress(progressData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Calculate stats for each vocab set
+  const getSetStats = (set: VocabSet) => {
+    if (!set.groups || set.groups.length === 0) {
+      return { total: 0, new: 0, due: 0 };
+    }
+
+    const allWords = set.groups.flatMap(g => g.words || []);
+    const wordsWithProgress = mergeProgressWithWords(allWords);
+    const newWords = getNewWords(wordsWithProgress);
+    const dueWords = getDueWords(wordsWithProgress);
+
+    return {
+      total: allWords.length,
+      new: newWords.length,
+      due: dueWords.length,
+    };
+  };
+
+  // Get all due words across all sets
+  const getAllDueWords = () => {
+    if (!vocabSets || vocabSets.length === 0) return [];
+
+    const allWords = vocabSets.flatMap(set =>
+      (set.groups || []).flatMap(group => group.words || [])
+    );
+    const wordsWithProgress = mergeProgressWithWords(allWords);
+    return getDueWords(wordsWithProgress);
+  };
+
+  // Get all words across all sets
+  const getAllWords = () => {
+    if (!vocabSets || vocabSets.length === 0) return [];
+
+    return vocabSets.flatMap(set =>
+      (set.groups || []).flatMap(group => group.words || [])
+    );
+  };
+
+  const handleSetActive = async (setId: string) => {
+    try {
+      // Call API to activate set
+      await fetch(`/api/vocab/sets/${setId}/activate`, { method: 'POST' });
+
+      // Update local state
+      setActiveSetIdState(setId);
+
+      // Update vocabSets state
+      setVocabSets(prev => prev.map(s => ({
+        ...s,
+        isActive: s.id === setId,
+      })));
+    } catch (error) {
+      console.error('Error activating set:', error);
+    }
+  };
+
+  const viewSetDetail = async (set: VocabSet) => {
+    try {
+      // Fetch full set with all words from database
+      const response = await fetch(`/api/vocab/sets/${set.id}`);
+      const fullSet = await response.json();
+      setSelectedSet(fullSet);
+      setViewMode('set-detail');
+    } catch (error) {
+      console.error('Error loading set:', error);
+      // Fallback to using the set as-is
+      setSelectedSet(set);
+      setViewMode('set-detail');
+    }
+  };
+
+  const startStudying = (group: VocabGroup, mode: FlashcardMode) => {
+    setSelectedGroup(group);
+    setFlashcardMode(mode);
+    const wordsWithProgress = mergeProgressWithWords(group.words);
+    setCards(wordsWithProgress);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setViewMode('flashcards');
+  };
+
+  const studyFullSet = (mode: FlashcardMode) => {
+    if (!selectedSet) return;
+    setSelectedGroup(null);
+    setFlashcardMode(mode);
+    const allWords = selectedSet.groups.flatMap(g => g.words);
+    const wordsWithProgress = mergeProgressWithWords(allWords);
+    setCards(wordsWithProgress);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setViewMode('flashcards');
+  };
+
+  const startReviewMode = () => {
+    const dueWords = getAllDueWords();
+    setCards(dueWords);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setFlashcardMode('hebrew-to-english');
+    setViewMode('review');
+  };
+
+  const returnToLibrary = () => {
+    setViewMode('library');
+    setSelectedSet(null);
+    setSelectedGroup(null);
+    setCards([]);
+  };
+
+  const returnToSetDetail = () => {
+    setViewMode('set-detail');
+    setSelectedGroup(null);
+    setCards([]);
+  };
+
+  const getCategoryEmoji = (category: string): string => {
+    const emojiMap: Record<string, string> = {
+      'Noun': '📦',
+      'Verb': '⚡',
+      'Adjective': '🎨',
+      'Preposition': '🔗',
+      'Particle': '✨',
+      'Number': '🔢',
+      'Pronoun': '👤',
+      'Adverb': '⏩',
+      'Conjunction': '➕',
+    };
+    return emojiMap[category] || '📝';
+  };
+
+  // Flashcard functions
+  const flipCard = () => setIsFlipped(!isFlipped);
   const nextCard = () => {
     setCurrentIndex((currentIndex + 1) % cards.length);
     setIsFlipped(false);
   };
-
   const previousCard = () => {
     setCurrentIndex((currentIndex - 1 + cards.length) % cards.length);
     setIsFlipped(false);
   };
-
   const shuffle = () => {
     const shuffled = [...cards];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -87,12 +225,130 @@ export default function VocabularyFlashcards() {
     setIsFlipped(false);
   };
 
-  const changeMode = (newMode: Mode) => {
-    setMode(newMode);
-    setIsFlipped(false);
+  // SRS Handlers
+  const handleCorrect = async () => {
+    if (!currentCard) return;
+
+    // Calculate next review with SRS algorithm
+    const updatedWord = calculateNextReview(currentCard, true);
+
+    // Update database via API
+    try {
+      const response = await fetch('/api/vocab/progress/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wordId: updatedWord.id,
+          correct: true,
+          level: updatedWord.level,
+          nextReview: updatedWord.nextReview,
+          lastReviewed: updatedWord.lastReviewed,
+          reviewCount: updatedWord.reviewCount,
+          correctCount: updatedWord.correctCount,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update progress state with new stats
+        setProgress((prev: any) => ({
+          ...prev,
+          stats: data.stats,
+          wordProgress: {
+            ...prev.wordProgress,
+            [updatedWord.id]: {
+              level: updatedWord.level,
+              nextReview: updatedWord.nextReview,
+              lastReviewed: updatedWord.lastReviewed,
+              reviewCount: updatedWord.reviewCount,
+              correctCount: updatedWord.correctCount,
+            },
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
+
+    // Update current card in state
+    const updatedCards = [...cards];
+    updatedCards[currentIndex] = updatedWord;
+    setCards(updatedCards);
+
+    // Auto-advance to next card
+    if (currentIndex < cards.length - 1) {
+      nextCard();
+    } else {
+      // Last card - show completion
+      setIsFlipped(false);
+    }
   };
 
+  const handleIncorrect = async () => {
+    if (!currentCard) return;
+
+    // Calculate next review with SRS algorithm (marked incorrect)
+    const updatedWord = calculateNextReview(currentCard, false);
+
+    // Update database via API
+    try {
+      const response = await fetch('/api/vocab/progress/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wordId: updatedWord.id,
+          correct: false,
+          level: updatedWord.level,
+          nextReview: updatedWord.nextReview,
+          lastReviewed: updatedWord.lastReviewed,
+          reviewCount: updatedWord.reviewCount,
+          correctCount: updatedWord.correctCount,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update progress state with new stats
+        setProgress((prev: any) => ({
+          ...prev,
+          stats: data.stats,
+          wordProgress: {
+            ...prev.wordProgress,
+            [updatedWord.id]: {
+              level: updatedWord.level,
+              nextReview: updatedWord.nextReview,
+              lastReviewed: updatedWord.lastReviewed,
+              reviewCount: updatedWord.reviewCount,
+              correctCount: updatedWord.correctCount,
+            },
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
+
+    // Update current card in state
+    const updatedCards = [...cards];
+    updatedCards[currentIndex] = updatedWord;
+    setCards(updatedCards);
+
+    // Auto-advance to next card
+    if (currentIndex < cards.length - 1) {
+      nextCard();
+    } else {
+      // Last card - show completion
+      setIsFlipped(false);
+    }
+  };
+
+
+  // Keyboard navigation
   useEffect(() => {
+    if (viewMode !== 'flashcards' && viewMode !== 'review') return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') nextCard();
       if (e.key === 'ArrowLeft') previousCard();
@@ -104,12 +360,27 @@ export default function VocabularyFlashcards() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, cards.length]);
+  }, [currentIndex, cards.length, viewMode]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-      <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto">
-        <div className="max-w-2xl mx-auto">
+  const currentCard = cards[currentIndex];
+  const totalDueWords = getAllDueWords().length;
+
+  // VIEW: Dashboard (Progress & Stats)
+  if (viewMode === 'dashboard' && progress) {
+    return (
+      <ProgressDashboard
+        progress={progress}
+        allWords={getAllWords()}
+        onStartStudy={returnToLibrary}
+      />
+    );
+  }
+
+  // VIEW: Library (Landing Page)
+  if (viewMode === 'library') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
           {/* Header */}
           <div className="text-center mb-8">
             <Link
@@ -126,123 +397,382 @@ export default function VocabularyFlashcards() {
                 Hebrew Vocabulary
               </span>
             </h1>
-            <p className="text-lg text-gray-600 mb-6">Genesis 1:1-5 Vocab</p>
+            <p className="text-lg text-gray-600">Your vocabulary sets and review schedule</p>
 
-            {/* Mode Switcher */}
-            <div className="flex gap-3 justify-center flex-wrap">
+            {/* Navigation to Dashboard */}
+            <div className="mt-4">
               <button
-                onClick={() => changeMode('hebrew-to-english')}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  mode === 'hebrew-to-english'
-                    ? 'bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
-                }`}
+                onClick={() => setViewMode('dashboard')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
               >
-                Hebrew → English
-              </button>
-              <button
-                onClick={() => changeMode('english-to-hebrew')}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  mode === 'english-to-hebrew'
-                    ? 'bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
-                }`}
-              >
-                English → Hebrew
+                <span>📊</span>
+                <span>View Progress Dashboard</span>
               </button>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 shadow-lg border border-white/50">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-700">Progress</span>
-              <span className="text-sm font-semibold bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                {currentIndex + 1} / {cards.length}
-              </span>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
+              <p className="mt-4 text-gray-600">Loading vocabulary sets...</p>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#6b7d6a] to-[#8a9a8a] rounded-full transition-all duration-300 shadow-md"
-                style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
-              />
-            </div>
-          </div>
+          )}
 
-          {/* Flashcard */}
-          <div
-            className={`bg-white rounded-3xl shadow-2xl border-2 transition-all duration-500 cursor-pointer hover:shadow-3xl mb-6 min-h-[400px] flex items-center justify-center ${
-              isFlipped ? 'border-[#d4c5b0] bg-gradient-to-br from-pink-50 to-purple-50' : 'border-[#d4c5b0]'
-            }`}
-            onClick={flipCard}
-          >
-            {!isFlipped ? (
-              // Front of card
-              <div className="p-12 text-center">
-                {mode === 'hebrew-to-english' ? (
-                  <div
-                    className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {currentCard.hebrew}
-                  </div>
-                ) : (
-                  <div className="text-5xl md:text-6xl font-bold text-gray-900">
-                    {currentCard.english}
-                  </div>
-                )}
-                <div className="text-gray-400 italic text-lg mt-6">
-                  Click to reveal answer
+          {/* Review Due Card */}
+          {totalDueWords > 0 && (
+            <div className="mb-8 bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-300 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-orange-900 mb-1">Review Due</h3>
+                  <p className="text-orange-700">You have {totalDueWords} word{totalDueWords !== 1 ? 's' : ''} ready for review</p>
                 </div>
-              </div>
-            ) : (
-              // Back of card
-              <div className="p-12 text-center">
-                <div
-                  className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
-                  onClick={(e) => e.stopPropagation()}
+                <button
+                  onClick={startReviewMode}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 >
-                  {mode === 'hebrew-to-english' ? currentCard.english : currentCard.hebrew}
-                </div>
-                <div className="text-2xl text-gray-600 italic mb-4">
-                  ({currentCard.trans})
-                </div>
-                <div className="text-lg text-gray-700 font-medium mb-4">
-                  {currentCard.type}
-                </div>
-                <div className="text-base text-gray-600 leading-relaxed">
-                  {currentCard.notes}
+                  Start Review
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Vocab Sets */}
+          {!isLoading && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Vocabulary Sets</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {vocabSets.map((set) => {
+                  const stats = getSetStats(set);
+                  const isActive = set.id === activeSetId;
+
+                return (
+                  <div
+                    key={set.id}
+                    className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 transition-all duration-200 hover:shadow-xl ${
+                      isActive ? 'border-green-400 bg-gradient-to-br from-green-50 to-white' : 'border-white/50'
+                    }`}
+                  >
+                    {/* Active Badge */}
+                    {isActive && (
+                      <div className="inline-block px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full mb-3">
+                        ACTIVE THIS WEEK
+                      </div>
+                    )}
+
+                    {/* Set Info */}
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">{set.title}</h3>
+                    <p className="text-sm text-gray-600 mb-4">{set.description}</p>
+
+                    {/* Stats */}
+                    <div className="flex gap-4 mb-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-600">Total:</span>
+                        <span className="font-bold text-gray-800">{stats.total}</span>
+                      </div>
+                      {stats.new > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-blue-600">New:</span>
+                          <span className="font-bold text-blue-700">{stats.new}</span>
+                        </div>
+                      )}
+                      {stats.due > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-orange-600">Due:</span>
+                          <span className="font-bold text-orange-700">{stats.due}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => viewSetDetail(set)}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        Study
+                      </button>
+                      {!isActive && (
+                        <button
+                          onClick={() => handleSetActive(set.id)}
+                          className="px-4 py-2 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border border-gray-300"
+                        >
+                          Set Active
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW: Set Detail (Organized Groups)
+  if (viewMode === 'set-detail' && selectedSet) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-4xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <button
+              onClick={returnToLibrary}
+              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Library
+            </button>
+            <h1 className="text-4xl md:text-5xl font-bold mb-2">
+              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
+                {selectedSet.title}
+              </span>
+            </h1>
+            <p className="text-lg text-gray-600">{selectedSet.description}</p>
+          </div>
+
+          {/* Vocab Groups */}
+          <div className="space-y-4 mb-8">
+            {selectedSet.groups.map((group, groupIndex) => (
+              <div key={groupIndex} className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
+                {/* Group Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <span>{getCategoryEmoji(group.category)}</span>
+                      <span>{group.category}</span>
+                    </h3>
+                    {group.subcategory && (
+                      <p className="text-sm text-gray-600 mt-1 ml-8">{group.subcategory}</p>
+                    )}
+                  </div>
+                  <div className="text-right mr-4">
+                    <div className="text-lg font-bold text-gray-800">{group.words.length} words</div>
+                    <div className="text-xs text-gray-500">~{suggestStudyDays(group)} day{suggestStudyDays(group) !== 1 ? 's' : ''}</div>
+                  </div>
+                  <button
+                    onClick={() => startStudying(group, 'hebrew-to-english')}
+                    className="px-5 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                  >
+                    Study This Group
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Review Entire Set Section */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 shadow-lg border-2 border-purple-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">Review All Together</h3>
+            <p className="text-sm text-gray-600 mb-4 text-center">
+              Study all {selectedSet.groups.reduce((sum, g) => sum + g.words.length, 0)} words from this set in one session
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => studyFullSet('hebrew-to-english')}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                Review: Hebrew → English
+              </button>
+              <button
+                onClick={() => studyFullSet('english-to-hebrew')}
+                className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 border-purple-300"
+              >
+                Review: English → Hebrew
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW: Flashcards or Review Mode
+  const isReviewMode = viewMode === 'review';
+  const backAction = isReviewMode ? returnToLibrary : returnToSetDetail;
+
+  let title = 'Study Session';
+  let subtitle = '';
+
+  if (isReviewMode) {
+    title = 'Review Session';
+    subtitle = 'Words due for review';
+  } else if (selectedGroup) {
+    title = `${getCategoryEmoji(selectedGroup.category)} ${selectedGroup.category}`;
+    subtitle = selectedGroup.subcategory || '';
+  } else if (selectedSet) {
+    title = `${selectedSet.title} - Full Review`;
+    subtitle = `All ${cards.length} words`;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+      <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <button
+              onClick={backAction}
+              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              {isReviewMode ? 'Back to Library' : 'Back to Set'}
+            </button>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
+                {title}
+              </span>
+            </h1>
+            {subtitle && (
+              <p className="text-md text-gray-600">{subtitle}</p>
             )}
           </div>
 
-          {/* Hint */}
-          <div className="text-center text-sm text-gray-600 mb-6">
-            💡 Click card to flip • Arrow keys to navigate • Space to flip
-          </div>
+          {/* Progress Bar */}
+          {cards.length > 0 && (
+            <>
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 shadow-lg border border-white/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-700">Progress</span>
+                  <span className="text-sm font-semibold bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
+                    {currentIndex + 1} / {cards.length}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#6b7d6a] to-[#8a9a8a] rounded-full transition-all duration-300 shadow-md"
+                    style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
+                  />
+                </div>
+              </div>
 
-          {/* Controls */}
-          <div className="flex flex-wrap gap-4 justify-center">
-            <button
-              onClick={previousCard}
-              className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
-            >
-              ← Previous
-            </button>
-            <button
-              onClick={shuffle}
-              className="px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-            >
-              🔀 Shuffle
-            </button>
-            <button
-              onClick={nextCard}
-              className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
-            >
-              Next →
-            </button>
-          </div>
+              {/* Flashcard */}
+              {currentCard && (
+                <div
+                  className={`bg-white rounded-3xl shadow-2xl border-2 transition-all duration-500 cursor-pointer hover:shadow-3xl mb-6 min-h-[400px] flex items-center justify-center ${
+                    isFlipped ? 'border-[#d4c5b0] bg-gradient-to-br from-pink-50 to-purple-50' : 'border-[#d4c5b0]'
+                  }`}
+                  onClick={flipCard}
+                >
+                  {!isFlipped ? (
+                    // Front of card
+                    <div className="p-12 text-center">
+                      {flashcardMode === 'hebrew-to-english' ? (
+                        <div
+                          className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {currentCard.hebrew}
+                        </div>
+                      ) : (
+                        <div className="text-5xl md:text-6xl font-bold text-gray-900">
+                          {currentCard.english}
+                        </div>
+                      )}
+                      <div className="text-gray-400 italic text-lg mt-6">
+                        Click to reveal answer
+                      </div>
+                    </div>
+                  ) : (
+                    // Back of card
+                    <div className="p-12 text-center">
+                      <div
+                        className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {flashcardMode === 'hebrew-to-english' ? currentCard.english : (
+                          <span className="font-[family-name:var(--font-hebrew)]">{currentCard.hebrew}</span>
+                        )}
+                      </div>
+                      <div className="text-2xl text-gray-600 italic mb-4">
+                        ({currentCard.trans})
+                      </div>
+                      <div className="text-lg text-gray-700 font-medium mb-4">
+                        {currentCard.type}
+                      </div>
+                      <div className="text-base text-gray-600 leading-relaxed">
+                        {currentCard.notes}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SRS Buttons (shown when card is flipped) */}
+              {isFlipped && currentCard && (
+                <div className="mb-6">
+                  <p className="text-center text-lg font-semibold text-gray-700 mb-3">
+                    Did you get it right?
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <button
+                      onClick={handleIncorrect}
+                      className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                    >
+                      <span className="text-2xl">❌</span>
+                      <span>Need Practice</span>
+                    </button>
+                    <button
+                      onClick={handleCorrect}
+                      className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                    >
+                      <span className="text-2xl">✓</span>
+                      <span>Got It!</span>
+                    </button>
+                  </div>
+                  <p className="text-center text-sm text-gray-500 mt-3">
+                    This helps track your progress and schedule reviews
+                  </p>
+                </div>
+              )}
+
+              {/* Hint */}
+              <div className="text-center text-sm text-gray-600 mb-6">
+                {isFlipped ? 'Mark your answer above' : 'Click card to flip - Arrow keys to navigate - Space to flip'}
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-wrap gap-4 justify-center">
+                <button
+                  onClick={previousCard}
+                  className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={shuffle}
+                  className="px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                >
+                  Shuffle
+                </button>
+                <button
+                  onClick={nextCard}
+                  className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
+
+          {cards.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-xl text-gray-600">No words to study right now!</p>
+              <button
+                onClick={backAction}
+                className="mt-4 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                Back to {isReviewMode ? 'Library' : 'Vocabulary Set'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
