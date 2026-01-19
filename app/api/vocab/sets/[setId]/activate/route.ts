@@ -5,13 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import postgres from 'postgres';
+import { getDb } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { setId: string } }
 ) {
-  const sql = postgres(process.env.POSTGRES_URL!);
+  const sql = getDb();
 
   try {
     const { setId } = params;
@@ -48,7 +48,5 @@ export async function POST(
       { error: 'Failed to activate vocab set' },
       { status: 500 }
     );
-  } finally {
-    await sql.end();
   }
 }

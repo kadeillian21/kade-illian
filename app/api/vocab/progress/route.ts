@@ -5,10 +5,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import postgres from 'postgres';
+import { getDb } from '@/lib/db';
 
 export async function GET() {
-  const sql = postgres(process.env.POSTGRES_URL!);
+  const sql = getDb();
 
   try {
     // 1. Get user stats
@@ -66,7 +66,5 @@ export async function GET() {
       { error: 'Failed to fetch progress' },
       { status: 500 }
     );
-  } finally {
-    await sql.end();
   }
 }

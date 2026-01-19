@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import postgres from 'postgres';
+import { getDb } from '@/lib/db';
 
 interface WordInput {
   hebrew: string;
@@ -21,7 +21,7 @@ interface WordInput {
 }
 
 export async function POST(request: NextRequest) {
-  const sql = postgres(process.env.POSTGRES_URL!);
+  const sql = getDb();
 
   try {
     const body = await request.json();
@@ -138,7 +138,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create vocab set' },
       { status: 500 }
     );
-  } finally {
-    await sql.end();
   }
 }

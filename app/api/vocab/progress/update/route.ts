@@ -5,10 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import postgres from 'postgres';
+import { getDb } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
-  const sql = postgres(process.env.POSTGRES_URL!);
+  const sql = getDb();
 
   try {
     const body = await request.json();
@@ -127,7 +127,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to update progress' },
       { status: 500 }
     );
-  } finally {
-    await sql.end();
   }
 }

@@ -51,21 +51,35 @@ export default function VocabularyPage() {
       try {
         // Fetch vocab sets
         const setsResponse = await fetch('/api/vocab/sets');
+        if (!setsResponse.ok) {
+          throw new Error('Failed to fetch vocab sets');
+        }
         const sets = await setsResponse.json();
-        setVocabSets(sets);
 
-        // Set active set (first active one, or first set)
-        const activeSet = sets.find((s: any) => s.isActive) || sets[0];
-        if (activeSet) {
-          setActiveSetIdState(activeSet.id);
+        // Validate response is an array
+        if (!Array.isArray(sets)) {
+          console.error('Invalid vocab sets response:', sets);
+          setVocabSets([]);
+        } else {
+          setVocabSets(sets);
+
+          // Set active set (first active one, or first set)
+          const activeSet = sets.find((s: any) => s.isActive) || sets[0];
+          if (activeSet) {
+            setActiveSetIdState(activeSet.id);
+          }
         }
 
         // Fetch progress
         const progressResponse = await fetch('/api/vocab/progress');
+        if (!progressResponse.ok) {
+          throw new Error('Failed to fetch progress');
+        }
         const progressData = await progressResponse.json();
         setProgress(progressData);
       } catch (error) {
         console.error('Error loading data:', error);
+        setVocabSets([]);
       } finally {
         setIsLoading(false);
       }
