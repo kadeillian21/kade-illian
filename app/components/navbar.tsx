@@ -176,10 +176,23 @@ const Navbar = () => {
                   </div>
                   <div className="relative cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-50">
                     <Link
+                      href="/hebrew/flashcards/grammar-markers"
+                      className={cn(
+                        "w-full flex items-center rounded-md px-2 py-1.5 transition-colors",
+                        pathname.includes("grammar-markers")
+                          ? "font-medium text-[#4a5d49]"
+                          : "text-gray-600 hover:text-[#4a5d49]"
+                      )}
+                    >
+                      Grammar Markers
+                    </Link>
+                  </div>
+                  <div className="relative cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-50">
+                    <Link
                       href="/hebrew/grammar"
                       className={cn(
                         "w-full flex items-center rounded-md px-2 py-1.5 transition-colors",
-                        pathname.includes("grammar")
+                        pathname === "/hebrew/grammar"
                           ? "font-medium text-[#4a5d49]"
                           : "text-gray-600 hover:text-[#4a5d49]"
                       )}
