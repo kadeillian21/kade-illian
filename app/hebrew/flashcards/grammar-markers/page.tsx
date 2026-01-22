@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 interface GrammarCard {
   hebrew: string;
+  pronunciation: string;
   meaning: string;
   type: string;
   category: string;
@@ -19,6 +20,7 @@ const grammarMarkers: GrammarCard[] = [
   // DEFINITE ARTICLE
   {
     hebrew: 'הַ',
+    pronunciation: 'ha-',
     meaning: 'The',
     type: 'Definite Article (with patach)',
     category: 'Articles',
@@ -27,6 +29,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'הָ',
+    pronunciation: 'ha-',
     meaning: 'The',
     type: 'Definite Article (with qamets)',
     category: 'Articles',
@@ -35,6 +38,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'הֶ',
+    pronunciation: 'he-',
     meaning: 'The',
     type: 'Definite Article (with segol)',
     category: 'Articles',
@@ -45,6 +49,7 @@ const grammarMarkers: GrammarCard[] = [
   // VAV CONJUNCTION
   {
     hebrew: 'וְ',
+    pronunciation: 've-',
     meaning: 'And',
     type: 'Vav Conjunction (with sheva)',
     category: 'Conjunctions',
@@ -53,6 +58,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'וּ',
+    pronunciation: 'u-',
     meaning: 'And',
     type: 'Vav Conjunction (with shureq)',
     category: 'Conjunctions',
@@ -61,6 +67,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'וָ',
+    pronunciation: 'va-',
     meaning: 'And',
     type: 'Vav Conjunction (with qamets)',
     category: 'Conjunctions',
@@ -69,6 +76,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'וַ',
+    pronunciation: 'va-',
     meaning: 'And (then)',
     type: 'Vav Consecutive',
     category: 'Conjunctions',
@@ -79,6 +87,7 @@ const grammarMarkers: GrammarCard[] = [
   // INSEPARABLE PREPOSITIONS
   {
     hebrew: 'בְּ',
+    pronunciation: 'be-',
     meaning: 'In / By / With',
     type: 'Inseparable Preposition',
     category: 'Prepositions',
@@ -87,6 +96,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'לְ',
+    pronunciation: 'le-',
     meaning: 'To / For',
     type: 'Inseparable Preposition',
     category: 'Prepositions',
@@ -95,6 +105,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'כְּ',
+    pronunciation: 'ke-',
     meaning: 'Like / As / According to',
     type: 'Inseparable Preposition',
     category: 'Prepositions',
@@ -105,6 +116,7 @@ const grammarMarkers: GrammarCard[] = [
   // COMBINED FORMS
   {
     hebrew: 'וּבְ',
+    pronunciation: 'uv-',
     meaning: 'And in',
     type: 'Vav + Preposition',
     category: 'Combined Forms',
@@ -113,6 +125,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'וְלַ',
+    pronunciation: 'vela-',
     meaning: 'And to/for the',
     type: 'Vav + Preposition + Article',
     category: 'Combined Forms',
@@ -121,6 +134,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'בַּ',
+    pronunciation: 'ba-',
     meaning: 'In the',
     type: 'Preposition + Article',
     category: 'Combined Forms',
@@ -129,6 +143,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'לָ',
+    pronunciation: 'la-',
     meaning: 'To the / For the',
     type: 'Preposition + Article',
     category: 'Combined Forms',
@@ -137,6 +152,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'כָּ',
+    pronunciation: 'ka-',
     meaning: 'Like the / As the',
     type: 'Preposition + Article',
     category: 'Combined Forms',
@@ -147,6 +163,7 @@ const grammarMarkers: GrammarCard[] = [
   // DIRECT OBJECT MARKER
   {
     hebrew: 'אֵת',
+    pronunciation: 'et',
     meaning: '[Direct object marker]',
     type: 'Particle (untranslatable)',
     category: 'Particles',
@@ -155,6 +172,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'אֶת־',
+    pronunciation: 'et-',
     meaning: '[Direct object marker]',
     type: 'Particle with Maqqef',
     category: 'Particles',
@@ -163,6 +181,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'וְאֵת',
+    pronunciation: "ve'et",
     meaning: 'And [object marker]',
     type: 'Vav + Particle',
     category: 'Particles',
@@ -173,6 +192,7 @@ const grammarMarkers: GrammarCard[] = [
   // STANDALONE PREPOSITIONS
   {
     hebrew: 'עַל',
+    pronunciation: 'al',
     meaning: 'On / Upon / Over',
     type: 'Preposition (standalone)',
     category: 'Prepositions',
@@ -181,6 +201,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'אֶל',
+    pronunciation: 'el',
     meaning: 'To / Toward / Unto',
     type: 'Preposition (standalone)',
     category: 'Prepositions',
@@ -189,6 +210,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'מִן',
+    pronunciation: 'min',
     meaning: 'From',
     type: 'Preposition (standalone)',
     category: 'Prepositions',
@@ -197,6 +219,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'עִם',
+    pronunciation: 'im',
     meaning: 'With',
     type: 'Preposition (standalone)',
     category: 'Prepositions',
@@ -205,6 +228,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'בֵּין',
+    pronunciation: 'bein',
     meaning: 'Between',
     type: 'Preposition (standalone)',
     category: 'Prepositions',
@@ -215,6 +239,7 @@ const grammarMarkers: GrammarCard[] = [
   // COMMON CONJUNCTIONS/PARTICLES
   {
     hebrew: 'כִּי',
+    pronunciation: 'ki',
     meaning: 'That / Because / When / For',
     type: 'Conjunction (multi-use)',
     category: 'Conjunctions',
@@ -223,6 +248,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'אֲשֶׁר',
+    pronunciation: 'asher',
     meaning: 'Who / Which / That',
     type: 'Relative Pronoun',
     category: 'Particles',
@@ -231,6 +257,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'אִם',
+    pronunciation: 'im',
     meaning: 'If',
     type: 'Conditional Particle',
     category: 'Particles',
@@ -239,6 +266,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'לֹא',
+    pronunciation: 'lo',
     meaning: 'Not / No',
     type: 'Negative Particle',
     category: 'Particles',
@@ -247,6 +275,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'אַל',
+    pronunciation: 'al',
     meaning: 'Do not',
     type: 'Negative Command',
     category: 'Particles',
@@ -257,6 +286,7 @@ const grammarMarkers: GrammarCard[] = [
   // PUNCTUATION MARKS
   {
     hebrew: '־',
+    pronunciation: 'maqqef',
     meaning: 'Maqqef (connector)',
     type: 'Punctuation',
     category: 'Punctuation',
@@ -265,6 +295,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: '׃',
+    pronunciation: 'sof pasuq',
     meaning: 'Sof Pasuq (verse end)',
     type: 'Punctuation',
     category: 'Punctuation',
@@ -273,6 +304,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'פ',
+    pronunciation: 'pe (petucha)',
     meaning: 'Petucha (paragraph)',
     type: 'Section Marker',
     category: 'Punctuation',
@@ -281,6 +313,7 @@ const grammarMarkers: GrammarCard[] = [
   },
   {
     hebrew: 'ס',
+    pronunciation: 'samekh (setumah)',
     meaning: 'Setumah (paragraph)',
     type: 'Section Marker',
     category: 'Punctuation',
@@ -451,10 +484,13 @@ export default function GrammarMarkersFlashcards() {
               // Back of card
               <div className="p-8 text-center w-full">
                 <div
-                  className="text-5xl md:text-6xl font-bold text-[#4a5d49] mb-4 select-text cursor-text"
+                  className="text-5xl md:text-6xl font-bold text-[#4a5d49] mb-2 select-text cursor-text"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {currentCard.meaning}
+                </div>
+                <div className="text-2xl text-gray-500 italic mb-4">
+                  ({currentCard.pronunciation})
                 </div>
                 <div className="text-lg text-[#6b7d6a] font-semibold mb-3">
                   {currentCard.type}
