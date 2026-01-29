@@ -21,6 +21,12 @@ function LoginForm() {
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
 
+    if (!supabase) {
+      setError('Authentication is not configured. Please contact support.');
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -39,6 +45,11 @@ function LoginForm() {
     setError('');
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
+
+    if (!supabase) {
+      setError('Authentication is not configured. Please contact support.');
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

@@ -17,6 +17,12 @@ export default function UserMenu() {
     import('@/lib/supabase/client').then(({ createClient }) => {
       const supabase = createClient();
 
+      // If Supabase not configured, just show sign in link
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       // Get initial user
       supabase.auth.getUser().then(({ data: { user } }) => {
         setUser(user);
@@ -49,7 +55,9 @@ export default function UserMenu() {
   const handleSignOut = async () => {
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setIsOpen(false);
     router.push('/');
     router.refresh();
