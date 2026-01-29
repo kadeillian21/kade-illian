@@ -9,7 +9,6 @@ import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress, SetType } from './
 import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
 import { suggestStudyDays } from './utils/organizer-v2';
 import ProgressDashboard from './components/ProgressDashboard';
-import PersistentStatsBar from './components/PersistentStatsBar';
 import LevelUpModal from './components/LevelUpModal';
 import AchievementToast from './components/AchievementToast';
 import Confetti from './components/Confetti';
@@ -641,18 +640,11 @@ export default function VocabularyPage() {
     return (
       <>
         {gamificationUI}
-        <PersistentStatsBar
-          sessionId={sessionId}
-          onStartSession={startSession}
+        <ProgressDashboard
           progress={progress}
+          allWords={getAllWords()}
+          onStartStudy={returnToLibrary}
         />
-        <div className="pt-20">
-          <ProgressDashboard
-            progress={progress}
-            allWords={getAllWords()}
-            onStartStudy={returnToLibrary}
-          />
-        </div>
       </>
     );
   }
@@ -662,12 +654,7 @@ export default function VocabularyPage() {
     return (
       <>
         {gamificationUI}
-        <PersistentStatsBar
-          sessionId={sessionId}
-          onStartSession={startSession}
-          progress={progress}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] pt-20">
+        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
           <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
           {/* Header */}
           <div className="text-center mb-8">

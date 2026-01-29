@@ -9,12 +9,12 @@ import { getDb } from '@/lib/db';
 
 export async function GET(
   request: Request,
-  { params }: { params: { setId: string } }
+  { params }: { params: Promise<{ setId: string }> }
 ) {
   const sql = getDb();
 
   try {
-    const { setId } = params;
+    const { setId } = await params;
 
     // 1. Get set metadata
     const setResult = await sql`
