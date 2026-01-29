@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
@@ -11,25 +10,29 @@ export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
+    // Only import and create client on the client side
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      const supabase = createClient();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      // Get initial user
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+        setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+    });
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -44,6 +47,8 @@ export default function UserMenu() {
   }, []);
 
   const handleSignOut = async () => {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
     await supabase.auth.signOut();
     setIsOpen(false);
     router.push('/');
