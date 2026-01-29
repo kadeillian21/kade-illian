@@ -27,11 +27,14 @@ export async function GET() {
       // Table likely exists
     }
 
-    // Ensure total_seconds column exists (in case table was created with old schema)
+    // Ensure all columns exist (in case table was created with old schema)
     try {
+      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE`;
       await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS total_seconds INTEGER DEFAULT 0`;
+      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`;
+      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
     } catch {
-      // Column likely exists
+      // Columns likely exist
     }
 
     // Get today's study session (using local date)
