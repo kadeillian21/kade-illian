@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const sql = getDb();
 
   try {
-    // Ensure table exists (auto-migration)
+    // Ensure table and columns exist (auto-migration)
     try {
       await sql`
         CREATE TABLE IF NOT EXISTS study_sessions (
@@ -24,7 +24,14 @@ export async function POST(request: Request) {
         )
       `;
     } catch {
-      // Table likely exists, continue
+      // Table likely exists
+    }
+
+    // Ensure total_seconds column exists (in case table was created with old schema)
+    try {
+      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS total_seconds INTEGER DEFAULT 0`;
+    } catch {
+      // Column likely exists
     }
 
     const body = await request.json();
