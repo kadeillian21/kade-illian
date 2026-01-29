@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 function SignupForm() {
@@ -15,7 +14,6 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/hebrew/vocabulary';
-  const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +31,9 @@ function SignupForm() {
       setLoading(false);
       return;
     }
+
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -52,6 +53,9 @@ function SignupForm() {
 
   const handleGoogleLogin = async () => {
     setError('');
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
