@@ -655,8 +655,8 @@ export default function VocabularyPage() {
             </h1>
             <p className="text-lg text-gray-600">Your vocabulary sets and review schedule</p>
 
-            {/* Navigation to Dashboard */}
-            <div className="mt-4">
+            {/* Navigation to Dashboard and Bulk Management */}
+            <div className="mt-4 flex flex-wrap gap-3 justify-center">
               <button
                 onClick={() => setViewMode('dashboard')}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
@@ -664,6 +664,13 @@ export default function VocabularyPage() {
                 <span>📊</span>
                 <span>View Progress Dashboard</span>
               </button>
+              <Link
+                href="/hebrew/vocabulary/manage"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                <span>✏️</span>
+                <span>Bulk Manage Words</span>
+              </Link>
             </div>
           </div>
 
