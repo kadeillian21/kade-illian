@@ -16,92 +16,9 @@ const MIN_GROUP_SIZE = 5;
 const MAX_GROUP_SIZE = 10;
 
 /**
- * Organizes words into evenly-sized, learnable groups
- *
- * Strategy:
- * 1. Group by part of speech (keep Nouns, Verbs, etc. separate)
- * 2. Within each part of speech, create even groups of 5-10 words
- * 3. Prefer semantic clustering where possible, but prioritize even sizing
- *
- * @param words - Array of Hebrew vocabulary words
- * @returns Organized array of VocabGroups with even sizing
+ * Helper: Gets the dominant semantic group from a list of words
  */
-export function organizeVocabularyV2(words: HebrewVocabWord[]): VocabGroup[] {
-  const groups: VocabGroup[] = [];
-
-  // Step 1: Group by part of speech
-  const wordsByType = groupByWordType(words);
-
-  // Step 2: For each part of speech, create evenly-sized groups
-  for (const [type, wordsOfType] of Object.entries(wordsByType)) {
-    const evenGroups = createEvenGroups(wordsOfType, type as WordType);
-    groups.push(...evenGroups);
-  }
-
-  return groups;
-}
-
-/**
- * Groups words by their part of speech (WordType)
- */
-function groupByWordType(words: HebrewVocabWord[]): Record<WordType, HebrewVocabWord[]> {
-  const grouped: Partial<Record<WordType, HebrewVocabWord[]>> = {};
-
-  for (const word of words) {
-    if (!grouped[word.type]) {
-      grouped[word.type] = [];
-    }
-    grouped[word.type]!.push(word);
-  }
-
-  return grouped as Record<WordType, HebrewVocabWord[]>;
-}
-
-/**
- * Creates evenly-sized groups from a list of words
- * Attempts to preserve semantic clustering within constraints
- */
-function createEvenGroups(words: HebrewVocabWord[], type: WordType): VocabGroup[] {
-  if (words.length === 0) return [];
-
-  // Sort by frequency (common words first)
-  const sorted = [...words].sort((a, b) => {
-    const freqA = a.frequency || 10000;
-    const freqB = b.frequency || 10000;
-    return freqA - freqB;
-  });
-
-  // Calculate optimal number of groups
-  const numGroups = Math.max(1, Math.round(sorted.length / TARGET_GROUP_SIZE));
-  const groupSize = Math.ceil(sorted.length / numGroups);
-
-  // Create groups
-  const groups: VocabGroup[] = [];
-
-  for (let i = 0; i < numGroups; i++) {
-    const start = i * groupSize;
-    const end = Math.min(start + groupSize, sorted.length);
-    const groupWords = sorted.slice(start, end);
-
-    if (groupWords.length === 0) continue;
-
-    // Determine subcategory based on dominant semantic group
-    const subcategory = getDominantSemanticGroup(groupWords);
-
-    groups.push({
-      category: type,
-      subcategory: groupWords.length === 1 ? groupWords[0].semanticGroup : subcategory,
-      words: groupWords,
-    });
-  }
-
-  return groups;
-}
-
-/**
- * Finds the most common semantic group in a set of words
- */
-function getDominantSemanticGroup(words: HebrewVocabWord[]): string {
+function getDominantSemanticGroupFromWords(words: HebrewVocabWord[]): string {
   const counts: Record<string, number> = {};
 
   for (const word of words) {
@@ -126,6 +43,148 @@ function getDominantSemanticGroup(words: HebrewVocabWord[]): string {
 
   return 'Mixed';
 }
+
+/**
+ * Organizes words into evenly-sized, learnable groups
+ *
+ * Strategy:
+ * 1. Group by part of speech (keep Nouns, Verbs, etc. separate)
+ * 2. Within each part of speech, create even groups of 5-10 words
+ * 3. Small groups (<5 words) are merged into a "Mixed" group
+ * 4. Prefer semantic clustering where possible, but prioritize even sizing
+ *
+ * @param words - Array of Hebrew vocabulary words
+ * @returns Organized array of VocabGroups with even sizing
+ */
+export function organizeVocabularyV2(words: HebrewVocabWord[]): VocabGroup[] {
+  const groups: VocabGroup[] = [];
+  const mergeBuffer: HebrewVocabWord[] = [];
+
+  // Step 1: Group by part of speech
+  const wordsByType = groupByWordType(words);
+
+  // Step 2: For each part of speech, create evenly-sized groups
+  for (const [type, wordsOfType] of Object.entries(wordsByType)) {
+    const evenGroups = createEvenGroups(wordsOfType, type as WordType);
+
+    // Collect groups that need merging
+    for (const group of evenGroups) {
+      if ((group as any).needsMerge) {
+        mergeBuffer.push(...group.words);
+      } else {
+        groups.push(group);
+      }
+    }
+  }
+
+  // Step 3: Merge small groups together
+  if (mergeBuffer.length > 0) {
+    // Sort by frequency
+    mergeBuffer.sort((a, b) => {
+      const freqA = a.frequency || 10000;
+      const freqB = b.frequency || 10000;
+      return freqA - freqB;
+    });
+
+    // Split into even groups if needed
+    const numGroups = Math.max(1, Math.round(mergeBuffer.length / TARGET_GROUP_SIZE));
+    const groupSize = Math.ceil(mergeBuffer.length / numGroups);
+
+    for (let i = 0; i < numGroups; i++) {
+      const start = i * groupSize;
+      const end = Math.min(start + groupSize, mergeBuffer.length);
+      const groupWords = mergeBuffer.slice(start, end);
+
+      if (groupWords.length === 0) continue;
+
+      groups.push({
+        category: 'Mixed' as any,
+        subcategory: 'Various Parts of Speech',
+        words: groupWords,
+      });
+    }
+  }
+
+  return groups;
+}
+
+/**
+ * Groups words by their part of speech (WordType)
+ */
+function groupByWordType(words: HebrewVocabWord[]): Record<WordType, HebrewVocabWord[]> {
+  const grouped: Partial<Record<WordType, HebrewVocabWord[]>> = {};
+
+  for (const word of words) {
+    if (!grouped[word.type]) {
+      grouped[word.type] = [];
+    }
+    grouped[word.type]!.push(word);
+  }
+
+  return grouped as Record<WordType, HebrewVocabWord[]>;
+}
+
+/**
+ * Creates evenly-sized groups from a list of words
+ * Attempts to preserve semantic clustering within constraints
+ * Groups too small (<MIN_GROUP_SIZE) are marked for merging
+ */
+function createEvenGroups(words: HebrewVocabWord[], type: WordType): VocabGroup[] {
+  if (words.length === 0) return [];
+
+  // Sort by frequency (common words first)
+  const sorted = [...words].sort((a, b) => {
+    const freqA = a.frequency || 10000;
+    const freqB = b.frequency || 10000;
+    return freqA - freqB;
+  });
+
+  // If too few words for a full group, mark for merging
+  if (sorted.length < MIN_GROUP_SIZE) {
+    return [{
+      category: type,
+      subcategory: 'Mixed',
+      words: sorted,
+      needsMerge: true,
+    } as any];
+  }
+
+  // Calculate optimal number of groups (never exceed MAX_GROUP_SIZE)
+  const numGroups = Math.max(1, Math.ceil(sorted.length / MAX_GROUP_SIZE));
+  const groupSize = Math.ceil(sorted.length / numGroups);
+
+  // Create groups
+  const groups: VocabGroup[] = [];
+
+  for (let i = 0; i < numGroups; i++) {
+    const start = i * groupSize;
+    const end = Math.min(start + groupSize, sorted.length);
+    const groupWords = sorted.slice(start, end);
+
+    if (groupWords.length === 0) continue;
+
+    // Determine subcategory
+    let subcategory: string;
+    if (groupWords.length === 1) {
+      subcategory = groupWords[0].semanticGroup || 'Mixed';
+    } else if (numGroups > 1) {
+      // Multiple groups of same type - label with group number
+      subcategory = `Group ${i + 1}`;
+    } else {
+      // Single group - use dominant semantic group
+      subcategory = getDominantSemanticGroupFromWords(groupWords);
+    }
+
+    groups.push({
+      category: type,
+      subcategory,
+      words: groupWords,
+    });
+  }
+
+  return groups;
+}
+
 
 /**
  * Suggests how many days to spend on a group based on word count and difficulty
