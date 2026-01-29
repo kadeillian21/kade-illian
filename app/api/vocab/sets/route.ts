@@ -11,6 +11,15 @@ export async function GET() {
   const sql = getDb();
 
   try {
+    // Ensure card_type columns exist (auto-migration)
+    try {
+      await sql`ALTER TABLE vocab_words ADD COLUMN IF NOT EXISTS card_type TEXT DEFAULT 'vocabulary'`;
+      await sql`ALTER TABLE vocab_words ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'::jsonb`;
+      await sql`ALTER TABLE vocab_sets ADD COLUMN IF NOT EXISTS set_type TEXT DEFAULT 'vocabulary'`;
+    } catch {
+      // Columns may already exist, continue
+    }
+
     // Get all vocab sets
     const setsResult = await sql`
       SELECT
