@@ -6,11 +6,6 @@ const protectedRoutes = ['/hebrew/vocabulary', '/hebrew/flashcards'];
 const authRoutes = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
-  // Skip auth checks if Supabase is not configured
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next();
-  }
-
   const { supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
