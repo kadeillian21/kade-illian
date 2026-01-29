@@ -51,7 +51,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching timer:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch timer data' },
+      { error: 'Failed to fetch timer data', details: String(error) },
       { status: 500 }
     );
   }
