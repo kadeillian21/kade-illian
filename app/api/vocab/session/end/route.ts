@@ -6,8 +6,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
@@ -21,9 +28,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get session start time
+    // Get session start time (verify ownership)
     const sessionResult = await sql`
-      SELECT start_time FROM study_sessions WHERE id = ${sessionId}
+      SELECT start_time FROM study_sessions
+      WHERE id = ${sessionId} AND user_id = ${user.id}
     `;
 
     if (sessionResult.length === 0) {
@@ -40,7 +48,7 @@ export async function POST(request: NextRequest) {
         end_time = NOW(),
         duration_seconds = EXTRACT(EPOCH FROM (NOW() - start_time)),
         cards_studied = ${cardsStudied || 0}
-      WHERE id = ${sessionId}
+      WHERE id = ${sessionId} AND user_id = ${user.id}
     `;
 
     // Get updated session

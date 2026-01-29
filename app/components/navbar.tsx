@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "./utils";
+import UserMenu from "./UserMenu";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -50,6 +51,10 @@ const Navbar = () => {
           >
             About
           </Link>
+
+          <div className="ml-2 pl-2 border-l border-gray-200">
+            <UserMenu />
+          </div>
         </nav>
       </div>
     </header>

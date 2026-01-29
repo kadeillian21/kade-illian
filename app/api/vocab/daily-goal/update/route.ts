@@ -1,23 +1,41 @@
 /**
  * POST /api/vocab/daily-goal/update
  *
- * Updates daily goal progress
+ * Updates daily goal progress for the current user
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
     const body = await request.json();
     const { cardsStudied } = body;
 
-    // Get current stats
-    const statsResult = await sql`
-      SELECT * FROM user_stats WHERE id = 1
+    // Get or create user stats
+    let statsResult = await sql`
+      SELECT * FROM user_stats WHERE user_id = ${user.id}
     `;
+
+    if (statsResult.length === 0) {
+      await sql`
+        INSERT INTO user_stats (user_id)
+        VALUES (${user.id})
+      `;
+      statsResult = await sql`
+        SELECT * FROM user_stats WHERE user_id = ${user.id}
+      `;
+    }
+
     const stats = statsResult[0];
 
     // Check if we need to reset daily count
@@ -36,7 +54,7 @@ export async function POST(request: NextRequest) {
         SET
           cards_today = ${cardsToday},
           last_goal_reset = CURRENT_DATE
-        WHERE id = 1
+        WHERE user_id = ${user.id}
       `;
     } else {
       // Same day, increment
@@ -44,7 +62,7 @@ export async function POST(request: NextRequest) {
       await sql`
         UPDATE user_stats
         SET cards_today = ${cardsToday}
-        WHERE id = 1
+        WHERE user_id = ${user.id}
       `;
     }
 

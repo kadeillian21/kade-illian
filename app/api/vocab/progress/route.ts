@@ -6,15 +6,34 @@
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET() {
+  // Check authentication
+  const { user, error } = await getAuthenticatedUser();
+  if (error || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
-    // 1. Get user stats
-    const statsResult = await sql`
-      SELECT * FROM user_stats WHERE id = 1
+    // 1. Get user stats (or create if doesn't exist)
+    let statsResult = await sql`
+      SELECT * FROM user_stats WHERE user_id = ${user.id}
     `;
+
+    if (statsResult.length === 0) {
+      // Create initial stats for this user
+      await sql`
+        INSERT INTO user_stats (user_id)
+        VALUES (${user.id})
+        ON CONFLICT (user_id) DO NOTHING
+      `;
+      statsResult = await sql`
+        SELECT * FROM user_stats WHERE user_id = ${user.id}
+      `;
+    }
 
     const stats = statsResult[0] || {
       last_studied: null,
@@ -24,7 +43,7 @@ export async function GET() {
       streak: 0,
     };
 
-    // 2. Get all word progress
+    // 2. Get all word progress for this user
     const progressResult = await sql`
       SELECT
         word_id,
@@ -34,10 +53,17 @@ export async function GET() {
         review_count,
         correct_count
       FROM user_progress
+      WHERE user_id = ${user.id}
     `;
 
     // 3. Format word progress as object
-    const wordProgress: Record<string, any> = {};
+    const wordProgress: Record<string, {
+      level: number;
+      nextReview: string | null;
+      lastReviewed: string | null;
+      reviewCount: number;
+      correctCount: number;
+    }> = {};
 
     progressResult.forEach(row => {
       wordProgress[row.word_id] = {

@@ -1,62 +1,38 @@
 /**
  * GET /api/timer
  *
- * Returns today's study time from database
+ * Returns today's study time from database for the current user
  */
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET() {
+  // Check authentication
+  const { user, error } = await getAuthenticatedUser();
+  if (error || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
-    // Ensure table and columns exist (auto-migration)
-    try {
-      await sql`
-        CREATE TABLE IF NOT EXISTS study_sessions (
-          id SERIAL PRIMARY KEY,
-          date DATE NOT NULL DEFAULT CURRENT_DATE,
-          total_seconds INTEGER DEFAULT 0,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(date)
-        )
-      `;
-    } catch {
-      // Table likely exists
-    }
-
-    // Ensure all columns exist (in case table was created with old schema)
-    try {
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS total_seconds INTEGER DEFAULT 0`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
-    } catch {
-      // Columns likely exist
-    }
-
-    // Get today's study session (using local date)
+    // Get today's study time for this user
     const today = new Date().toISOString().split('T')[0];
 
     const result = await sql`
-      SELECT total_seconds, date
+      SELECT
+        COALESCE(SUM(duration_seconds), 0) as total_seconds
       FROM study_sessions
-      WHERE date = ${today}::date
+      WHERE user_id = ${user.id}
+        AND DATE(start_time) = ${today}::date
+        AND end_time IS NOT NULL
     `;
 
-    if (result.length === 0) {
-      // No session for today yet
-      return NextResponse.json({
-        date: today,
-        totalSeconds: 0,
-      });
-    }
-
     return NextResponse.json({
-      date: result[0].date,
-      totalSeconds: result[0].total_seconds,
+      date: today,
+      totalSeconds: Number(result[0]?.total_seconds) || 0,
     });
   } catch (error) {
     console.error('Error fetching timer:', error);

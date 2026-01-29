@@ -2,15 +2,23 @@
  * GET /api/vocab/sets/[setId]
  *
  * Returns a specific vocab set with all words organized into groups
+ * and user-specific progress
  */
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ setId: string }> }
 ) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
@@ -30,7 +38,7 @@ export async function GET(
 
     const set = setResult[0];
 
-    // 2. Get all words for this set WITH progress data
+    // 2. Get all words for this set WITH user-specific progress data
     const wordsResult = await sql`
       SELECT
         vw.id,
@@ -49,13 +57,31 @@ export async function GET(
         up.review_count,
         up.correct_count
       FROM vocab_words vw
-      LEFT JOIN user_progress up ON vw.id = up.word_id
+      LEFT JOIN user_progress up ON vw.id = up.word_id AND up.user_id = ${user.id}
       WHERE vw.set_id = ${setId}
       ORDER BY vw.group_category, vw.group_subcategory, vw.frequency DESC
     `;
 
     // 3. Organize words into groups
-    const groupsMap = new Map();
+    const groupsMap = new Map<string, {
+      category: string;
+      subcategory: string | null;
+      words: Array<{
+        id: string;
+        hebrew: string;
+        trans: string;
+        english: string;
+        type: string;
+        notes: string | null;
+        semanticGroup: string | null;
+        frequency: number | null;
+        level: number;
+        nextReview: string | null;
+        lastReviewed: string | null;
+        reviewCount: number;
+        correctCount: number;
+      }>;
+    }>();
 
     wordsResult.forEach(row => {
       const key = `${row.group_category}|${row.group_subcategory || ''}`;
@@ -68,7 +94,7 @@ export async function GET(
         });
       }
 
-      groupsMap.get(key).words.push({
+      groupsMap.get(key)!.words.push({
         id: row.id,
         hebrew: row.hebrew,
         trans: row.transliteration,

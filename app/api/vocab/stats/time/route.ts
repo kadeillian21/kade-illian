@@ -1,17 +1,24 @@
 /**
  * GET /api/vocab/stats/time
  *
- * Returns study time stats (day, week, month, year)
+ * Returns study time stats (day, week, month, year) for the current user
  */
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET() {
+  // Check authentication
+  const { user, error } = await getAuthenticatedUser();
+  if (error || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
-    // Get study time for different periods
+    // Get study time for different periods (filtered by user_id)
     const stats = await sql`
       SELECT
         COALESCE(SUM(CASE
@@ -36,7 +43,7 @@ export async function GET() {
         END), 0) as year_seconds,
         COALESCE(SUM(duration_seconds), 0) as total_seconds
       FROM study_sessions
-      WHERE end_time IS NOT NULL
+      WHERE end_time IS NOT NULL AND user_id = ${user.id}
     `;
 
     const row = stats[0];

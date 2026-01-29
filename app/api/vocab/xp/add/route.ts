@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
+import type postgres from 'postgres';
 
 // XP required for each level (exponential growth)
 const XP_PER_LEVEL = [
@@ -36,11 +38,17 @@ function calculateLevel(xp: number): number {
 }
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
     const body = await request.json();
-    const { xpAmount, reason } = body;
+    const { xpAmount } = body;
 
     if (!xpAmount || xpAmount <= 0) {
       return NextResponse.json(
@@ -49,10 +57,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current stats
-    const statsResult = await sql`
-      SELECT * FROM user_stats WHERE id = 1
+    // Get or create user stats
+    let statsResult = await sql`
+      SELECT * FROM user_stats WHERE user_id = ${user.id}
     `;
+
+    if (statsResult.length === 0) {
+      await sql`
+        INSERT INTO user_stats (user_id)
+        VALUES (${user.id})
+      `;
+      statsResult = await sql`
+        SELECT * FROM user_stats WHERE user_id = ${user.id}
+      `;
+    }
+
     const currentStats = statsResult[0];
 
     const oldXP = currentStats.xp || 0;
@@ -69,11 +88,11 @@ export async function POST(request: NextRequest) {
         xp = ${newXP},
         level = ${newLevel},
         updated_at = NOW()
-      WHERE id = 1
+      WHERE user_id = ${user.id}
     `;
 
     // Check for newly unlocked achievements
-    const unlockedAchievements = await checkAchievements(sql, currentStats);
+    const unlockedAchievements = await checkAchievements(sql, currentStats, user.id);
 
     return NextResponse.json({
       success: true,
@@ -95,64 +114,80 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function checkAchievements(sql: any, stats: any) {
-  const unlocked: any[] = [];
+interface UserStats {
+  total_reviews?: number;
+  streak?: number;
+  words_mastered?: number;
+}
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  xp_reward: number;
+}
+
+async function checkAchievements(
+  sql: ReturnType<typeof postgres>,
+  stats: UserStats,
+  userId: string
+): Promise<Achievement[]> {
+  const unlocked: Achievement[] = [];
 
   // Check for achievements based on current stats
   const achievements = [
     {
       id: 'first-card',
-      condition: stats.total_reviews >= 1,
+      condition: (stats.total_reviews || 0) >= 1,
     },
     {
       id: 'ten-cards',
-      condition: stats.total_reviews >= 10,
+      condition: (stats.total_reviews || 0) >= 10,
     },
     {
       id: 'fifty-cards',
-      condition: stats.total_reviews >= 50,
+      condition: (stats.total_reviews || 0) >= 50,
     },
     {
       id: 'hundred-cards',
-      condition: stats.total_reviews >= 100,
+      condition: (stats.total_reviews || 0) >= 100,
     },
     {
       id: 'streak-3',
-      condition: stats.streak >= 3,
+      condition: (stats.streak || 0) >= 3,
     },
     {
       id: 'streak-7',
-      condition: stats.streak >= 7,
+      condition: (stats.streak || 0) >= 7,
     },
     {
       id: 'streak-30',
-      condition: stats.streak >= 30,
+      condition: (stats.streak || 0) >= 30,
     },
     {
       id: 'master-10',
-      condition: stats.words_mastered >= 10,
+      condition: (stats.words_mastered || 0) >= 10,
     },
     {
       id: 'master-50',
-      condition: stats.words_mastered >= 50,
+      condition: (stats.words_mastered || 0) >= 50,
     },
   ];
 
   for (const achievement of achievements) {
     if (achievement.condition) {
-      // Check if already unlocked
+      // Check if already unlocked for this user
       const progress = await sql`
-        SELECT * FROM achievement_progress WHERE achievement_id = ${achievement.id}
+        SELECT * FROM achievement_progress
+        WHERE achievement_id = ${achievement.id} AND user_id = ${userId}
       `;
 
-      if (progress[0] && !progress[0].unlocked) {
-        // Unlock it!
+      if (progress.length === 0) {
+        // Create achievement progress and unlock it
         await sql`
-          UPDATE achievement_progress
-          SET
-            unlocked = true,
-            unlocked_at = NOW()
-          WHERE achievement_id = ${achievement.id}
+          INSERT INTO achievement_progress (user_id, achievement_id, unlocked, unlocked_at)
+          VALUES (${userId}, ${achievement.id}, true, NOW())
         `;
 
         // Get achievement details
@@ -160,15 +195,44 @@ async function checkAchievements(sql: any, stats: any) {
           SELECT * FROM achievements WHERE id = ${achievement.id}
         `;
 
-        unlocked.push(achDetails[0]);
+        if (achDetails[0]) {
+          unlocked.push(achDetails[0] as Achievement);
 
-        // Award XP bonus
-        if (achDetails[0].xp_reward > 0) {
-          await sql`
-            UPDATE user_stats
-            SET xp = xp + ${achDetails[0].xp_reward}
-            WHERE id = 1
-          `;
+          // Award XP bonus
+          if (achDetails[0].xp_reward > 0) {
+            await sql`
+              UPDATE user_stats
+              SET xp = xp + ${achDetails[0].xp_reward}
+              WHERE user_id = ${userId}
+            `;
+          }
+        }
+      } else if (!progress[0].unlocked) {
+        // Unlock it!
+        await sql`
+          UPDATE achievement_progress
+          SET
+            unlocked = true,
+            unlocked_at = NOW()
+          WHERE achievement_id = ${achievement.id} AND user_id = ${userId}
+        `;
+
+        // Get achievement details
+        const achDetails = await sql`
+          SELECT * FROM achievements WHERE id = ${achievement.id}
+        `;
+
+        if (achDetails[0]) {
+          unlocked.push(achDetails[0] as Achievement);
+
+          // Award XP bonus
+          if (achDetails[0].xp_reward > 0) {
+            await sql`
+              UPDATE user_stats
+              SET xp = xp + ${achDetails[0].xp_reward}
+              WHERE user_id = ${userId}
+            `;
+          }
         }
       }
     }

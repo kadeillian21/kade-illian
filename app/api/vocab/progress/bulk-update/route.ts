@@ -6,8 +6,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
@@ -34,10 +41,11 @@ export async function POST(request: NextRequest) {
       ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 1 day from now
       : now;
 
-    // Update or insert progress for each word
+    // Update or insert progress for each word with user_id
     for (const wordId of wordIds) {
       await sql`
         INSERT INTO user_progress (
+          user_id,
           word_id,
           level,
           next_review,
@@ -46,6 +54,7 @@ export async function POST(request: NextRequest) {
           correct_count
         )
         VALUES (
+          ${user.id},
           ${wordId},
           ${level},
           ${nextReview},
@@ -53,7 +62,7 @@ export async function POST(request: NextRequest) {
           1,
           ${level}
         )
-        ON CONFLICT (word_id)
+        ON CONFLICT (user_id, word_id)
         DO UPDATE SET
           level = ${level},
           next_review = ${nextReview},

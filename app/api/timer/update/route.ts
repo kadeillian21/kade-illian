@@ -1,42 +1,24 @@
 /**
  * POST /api/timer/update
  *
- * Updates today's study time
+ * Updates today's study time for the current user
+ * Note: This now uses the study_sessions table with user_id
  */
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request: Request) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
-    // Ensure table and columns exist (auto-migration)
-    try {
-      await sql`
-        CREATE TABLE IF NOT EXISTS study_sessions (
-          id SERIAL PRIMARY KEY,
-          date DATE NOT NULL DEFAULT CURRENT_DATE,
-          total_seconds INTEGER DEFAULT 0,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(date)
-        )
-      `;
-    } catch {
-      // Table likely exists
-    }
-
-    // Ensure all columns exist (in case table was created with old schema)
-    try {
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS total_seconds INTEGER DEFAULT 0`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`;
-      await sql`ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
-    } catch {
-      // Columns likely exist
-    }
-
     const body = await request.json();
     const { additionalSeconds } = body;
 
@@ -47,22 +29,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get today's date
+    // Create a new completed study session for this timer update
+    await sql`
+      INSERT INTO study_sessions (
+        user_id,
+        mode,
+        start_time,
+        end_time,
+        last_activity,
+        duration_seconds
+      ) VALUES (
+        ${user.id},
+        'timer',
+        NOW() - INTERVAL '1 second' * ${additionalSeconds},
+        NOW(),
+        NOW(),
+        ${additionalSeconds}
+      )
+    `;
+
+    // Get today's total study time
     const today = new Date().toISOString().split('T')[0];
 
-    // Upsert: insert new row or update existing
     const result = await sql`
-      INSERT INTO study_sessions (date, total_seconds, updated_at)
-      VALUES (${today}::date, ${additionalSeconds}, NOW())
-      ON CONFLICT (date) DO UPDATE
-      SET total_seconds = study_sessions.total_seconds + ${additionalSeconds},
-          updated_at = NOW()
-      RETURNING total_seconds
+      SELECT
+        COALESCE(SUM(duration_seconds), 0) as total_seconds
+      FROM study_sessions
+      WHERE user_id = ${user.id}
+        AND DATE(start_time) = ${today}::date
+        AND end_time IS NOT NULL
     `;
 
     return NextResponse.json({
       success: true,
-      totalSeconds: result[0].total_seconds,
+      totalSeconds: Number(result[0]?.total_seconds) || 0,
     });
   } catch (error) {
     console.error('Error updating timer:', error);

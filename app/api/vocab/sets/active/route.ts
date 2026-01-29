@@ -1,13 +1,20 @@
 /**
  * GET /api/vocab/sets/active
  *
- * Returns all active vocab sets with their words
+ * Returns all active vocab sets with their words and user-specific progress
  */
 
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET() {
+  // Check authentication
+  const { user, error } = await getAuthenticatedUser();
+  if (error || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
@@ -25,7 +32,7 @@ export async function GET() {
 
     const setIds = activeSets.map(s => s.id);
 
-    // Get all words for active sets WITH progress
+    // Get all words for active sets WITH user-specific progress
     const wordsResult = await sql`
       SELECT
         vw.id,
@@ -45,7 +52,7 @@ export async function GET() {
         up.review_count,
         up.correct_count
       FROM vocab_words vw
-      LEFT JOIN user_progress up ON vw.id = up.word_id
+      LEFT JOIN user_progress up ON vw.id = up.word_id AND up.user_id = ${user.id}
       WHERE vw.set_id = ANY(${setIds})
       ORDER BY vw.set_id, vw.group_category, vw.group_subcategory, vw.frequency DESC
     `;
@@ -55,7 +62,26 @@ export async function GET() {
       const setWords = wordsResult.filter(w => w.set_id === set.id);
 
       // Organize into groups
-      const groupsMap = new Map();
+      const groupsMap = new Map<string, {
+        category: string;
+        subcategory: string | null;
+        words: Array<{
+          id: string;
+          hebrew: string;
+          trans: string;
+          english: string;
+          type: string;
+          notes: string | null;
+          semanticGroup: string | null;
+          frequency: number | null;
+          level: number;
+          nextReview: string | null;
+          lastReviewed: string | null;
+          reviewCount: number;
+          correctCount: number;
+        }>;
+      }>();
+
       setWords.forEach(row => {
         const key = `${row.group_category}|${row.group_subcategory || ''}`;
 
@@ -67,7 +93,7 @@ export async function GET() {
           });
         }
 
-        groupsMap.get(key).words.push({
+        groupsMap.get(key)!.words.push({
           id: row.id,
           hebrew: row.hebrew,
           trans: row.transliteration,

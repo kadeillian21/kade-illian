@@ -6,8 +6,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {
@@ -21,11 +28,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update last activity
+    // Update last activity (verify ownership)
     await sql`
       UPDATE study_sessions
       SET last_activity = NOW()
-      WHERE id = ${sessionId}
+      WHERE id = ${sessionId} AND user_id = ${user.id}
     `;
 
     return NextResponse.json({ success: true });
