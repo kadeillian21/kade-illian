@@ -25,22 +25,28 @@ export async function GET() {
       ORDER BY created_at DESC
     `;
 
-    // Get all words for all sets
+    // Get all words for all sets WITH progress data
     const wordsResult = await sql`
       SELECT
-        id,
-        hebrew,
-        transliteration,
-        english,
-        type,
-        notes,
-        semantic_group,
-        frequency,
-        set_id,
-        group_category,
-        group_subcategory
-      FROM vocab_words
-      ORDER BY set_id, group_category, group_subcategory, frequency DESC
+        vw.id,
+        vw.hebrew,
+        vw.transliteration,
+        vw.english,
+        vw.type,
+        vw.notes,
+        vw.semantic_group,
+        vw.frequency,
+        vw.set_id,
+        vw.group_category,
+        vw.group_subcategory,
+        up.level,
+        up.next_review,
+        up.last_reviewed,
+        up.review_count,
+        up.correct_count
+      FROM vocab_words vw
+      LEFT JOIN user_progress up ON vw.id = up.word_id
+      ORDER BY vw.set_id, vw.group_category, vw.group_subcategory, vw.frequency DESC
     `;
 
     // Organize into sets with groups
@@ -70,6 +76,12 @@ export async function GET() {
           notes: row.notes,
           semanticGroup: row.semantic_group,
           frequency: row.frequency,
+          // Include progress data (will be null/0 for new words)
+          level: row.level || 0,
+          nextReview: row.next_review || null,
+          lastReviewed: row.last_reviewed || null,
+          reviewCount: row.review_count || 0,
+          correctCount: row.correct_count || 0,
         });
       });
 

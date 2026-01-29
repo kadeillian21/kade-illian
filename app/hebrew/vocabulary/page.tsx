@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress } from './data/types';
 import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
-import { suggestStudyDays } from './utils/organizer';
+import { suggestStudyDays } from './utils/organizer-v2';
 import ProgressDashboard from './components/ProgressDashboard';
 
 type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
@@ -26,23 +26,23 @@ export default function VocabularyPage() {
   const [progress, setProgress] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper: Merge progress data with words
-  const mergeProgressWithWords = (words: HebrewVocabWord[]) => {
-    if (!progress || !progress.wordProgress) return words;
+  // Helper: Refresh progress data for words after update
+  // Words now come from DB with progress already attached, but we need to
+  // update them after marking correct/incorrect in the same session
+  const refreshWordProgress = (word: HebrewVocabWord, wordId: string) => {
+    if (!progress || !progress.wordProgress || !progress.wordProgress[wordId]) {
+      return word;
+    }
 
-    return words.map(word => {
-      const wordProgress = progress.wordProgress[word.id];
-      if (!wordProgress) return word;
-
-      return {
-        ...word,
-        level: wordProgress.level,
-        nextReview: wordProgress.nextReview,
-        lastReviewed: wordProgress.lastReviewed,
-        reviewCount: wordProgress.reviewCount,
-        correctCount: wordProgress.correctCount,
-      };
-    });
+    const updatedProgress = progress.wordProgress[wordId];
+    return {
+      ...word,
+      level: updatedProgress.level,
+      nextReview: updatedProgress.nextReview,
+      lastReviewed: updatedProgress.lastReviewed,
+      reviewCount: updatedProgress.reviewCount,
+      correctCount: updatedProgress.correctCount,
+    };
   };
 
   // Load vocab sets and progress from database
@@ -94,10 +94,10 @@ export default function VocabularyPage() {
       return { total: 0, new: 0, due: 0 };
     }
 
+    // Words already have progress data from DB
     const allWords = set.groups.flatMap(g => g.words || []);
-    const wordsWithProgress = mergeProgressWithWords(allWords);
-    const newWords = getNewWords(wordsWithProgress);
-    const dueWords = getDueWords(wordsWithProgress);
+    const newWords = getNewWords(allWords);
+    const dueWords = getDueWords(allWords);
 
     return {
       total: allWords.length,
@@ -110,11 +110,11 @@ export default function VocabularyPage() {
   const getAllDueWords = () => {
     if (!vocabSets || vocabSets.length === 0) return [];
 
+    // Words already have progress data from DB
     const allWords = vocabSets.flatMap(set =>
       (set.groups || []).flatMap(group => group.words || [])
     );
-    const wordsWithProgress = mergeProgressWithWords(allWords);
-    return getDueWords(wordsWithProgress);
+    return getDueWords(allWords);
   };
 
   // Get all words across all sets
@@ -162,8 +162,8 @@ export default function VocabularyPage() {
   const startStudying = (group: VocabGroup, mode: FlashcardMode) => {
     setSelectedGroup(group);
     setFlashcardMode(mode);
-    const wordsWithProgress = mergeProgressWithWords(group.words);
-    setCards(wordsWithProgress);
+    // Words already have progress data from DB
+    setCards(group.words);
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
@@ -173,9 +173,9 @@ export default function VocabularyPage() {
     if (!selectedSet) return;
     setSelectedGroup(null);
     setFlashcardMode(mode);
+    // Words already have progress data from DB
     const allWords = selectedSet.groups.flatMap(g => g.words);
-    const wordsWithProgress = mergeProgressWithWords(allWords);
-    setCards(wordsWithProgress);
+    setCards(allWords);
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');

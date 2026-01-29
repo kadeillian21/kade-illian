@@ -22,6 +22,8 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isReorganizing, setIsReorganizing] = useState(false);
+  const [reorganizeResult, setReorganizeResult] = useState<any>(null);
 
   const handlePreview = () => {
     setError('');
@@ -142,6 +144,35 @@ export default function AdminPage() {
     }
   };
 
+  // Reorganize all vocab sets with new grouping algorithm
+  const handleReorganize = async () => {
+    setIsReorganizing(true);
+    setReorganizeResult(null);
+    setError('');
+
+    try {
+      const response = await fetch('/api/vocab/reorganize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}), // Reorganize all sets
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to reorganize vocab sets');
+        setIsReorganizing(false);
+        return;
+      }
+
+      setReorganizeResult(data);
+    } catch (err) {
+      setError('Failed to reorganize vocab sets');
+    } finally {
+      setIsReorganizing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] p-6">
       <div className="max-w-5xl mx-auto">
@@ -161,6 +192,40 @@ export default function AdminPage() {
             Admin: Add Vocabulary Set
           </h1>
           <p className="text-center text-gray-600">Paste JSON from Claude teacher to create a new vocab set</p>
+        </div>
+
+        {/* Reorganize Section */}
+        <div className="bg-orange-50/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-6 border-2 border-orange-200">
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Reorganize Vocabulary</h2>
+          <p className="text-gray-700 mb-4">
+            This will reorganize all existing vocab sets using the new even grouping algorithm (5-10 words per group).
+            It will replace the current fragmented groups with evenly-sized, learnable groups.
+          </p>
+
+          <button
+            onClick={handleReorganize}
+            disabled={isReorganizing}
+            className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isReorganizing ? 'Reorganizing...' : 'Reorganize All Vocab Sets'}
+          </button>
+
+          {/* Reorganize Result */}
+          {reorganizeResult && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-orange-300">
+              <p className="font-semibold text-green-700 mb-2">✅ {reorganizeResult.message}</p>
+              {reorganizeResult.sets && reorganizeResult.sets.map((set: any, idx: number) => (
+                <div key={idx} className="mt-2 text-sm">
+                  <p className="font-mono text-gray-800">{set.setId}: {set.wordsUpdated} words → {set.numGroups} groups</p>
+                  {set.groups && set.groups.map((group: any, gIdx: number) => (
+                    <p key={gIdx} className="ml-4 text-gray-600">
+                      - {group.category} {group.subcategory ? `(${group.subcategory})` : ''}: {group.wordCount} words
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Set Information */}
