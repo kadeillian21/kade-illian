@@ -7,29 +7,25 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
-// Ensure table exists (runs once)
-let tableCreated = false;
-
-async function ensureTable(sql: ReturnType<typeof getDb>) {
-  if (tableCreated) return;
-  await sql`
-    CREATE TABLE IF NOT EXISTS study_sessions (
-      id SERIAL PRIMARY KEY,
-      date DATE NOT NULL DEFAULT CURRENT_DATE,
-      total_seconds INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(date)
-    )
-  `;
-  tableCreated = true;
-}
-
 export async function POST(request: Request) {
   const sql = getDb();
 
   try {
-    await ensureTable(sql);
+    // Ensure table exists (auto-migration)
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS study_sessions (
+          id SERIAL PRIMARY KEY,
+          date DATE NOT NULL DEFAULT CURRENT_DATE,
+          total_seconds INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(date)
+        )
+      `;
+    } catch {
+      // Table likely exists, continue
+    }
 
     const body = await request.json();
     const { additionalSeconds } = body;

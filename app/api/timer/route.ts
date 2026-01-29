@@ -7,29 +7,25 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
-// Ensure table exists (runs once)
-let tableCreated = false;
-
-async function ensureTable(sql: ReturnType<typeof getDb>) {
-  if (tableCreated) return;
-  await sql`
-    CREATE TABLE IF NOT EXISTS study_sessions (
-      id SERIAL PRIMARY KEY,
-      date DATE NOT NULL DEFAULT CURRENT_DATE,
-      total_seconds INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(date)
-    )
-  `;
-  tableCreated = true;
-}
-
 export async function GET() {
   const sql = getDb();
 
   try {
-    await ensureTable(sql);
+    // Ensure table exists (auto-migration)
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS study_sessions (
+          id SERIAL PRIMARY KEY,
+          date DATE NOT NULL DEFAULT CURRENT_DATE,
+          total_seconds INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(date)
+        )
+      `;
+    } catch {
+      // Table likely exists, continue
+    }
 
     // Get today's study session (using local date)
     const today = new Date().toISOString().split('T')[0];
