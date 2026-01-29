@@ -38,8 +38,8 @@ export default function BulkManagePage() {
       const response = await fetch('/api/vocab/sets');
       const data = await response.json();
 
-      // Transform data to flat word list with set info
-      const setsWithWords: VocabSet[] = data.sets.map((set: any) => ({
+      // API returns array directly, not wrapped in { sets: [...] }
+      const setsWithWords: VocabSet[] = data.map((set: any) => ({
         id: set.id,
         title: set.title,
         words: (set.groups || []).flatMap((group: any) =>
