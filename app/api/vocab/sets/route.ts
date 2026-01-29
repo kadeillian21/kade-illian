@@ -19,6 +19,7 @@ export async function GET() {
         description,
         total_words,
         is_active,
+        set_type,
         created_at,
         updated_at
       FROM vocab_sets
@@ -39,6 +40,8 @@ export async function GET() {
         vw.set_id,
         vw.group_category,
         vw.group_subcategory,
+        vw.card_type,
+        vw.extra_data,
         up.level,
         up.next_review,
         up.last_reviewed,
@@ -76,6 +79,8 @@ export async function GET() {
           notes: row.notes,
           semanticGroup: row.semantic_group,
           frequency: row.frequency,
+          cardType: row.card_type,
+          extraData: row.extra_data,
           // Include progress data (will be null/0 for new words)
           level: row.level || 0,
           nextReview: row.next_review || null,
@@ -92,6 +97,7 @@ export async function GET() {
         dateAdded: setRow.created_at,
         totalWords: setRow.total_words,
         isActive: setRow.is_active,
+        setType: setRow.set_type || 'vocabulary',
         groups: Array.from(groupsMap.values()),
       };
     });

@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress } from './data/types';
+import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress, SetType } from './data/types';
 import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
 import { suggestStudyDays } from './utils/organizer-v2';
 import ProgressDashboard from './components/ProgressDashboard';
@@ -13,6 +13,7 @@ import PersistentStatsBar from './components/PersistentStatsBar';
 import LevelUpModal from './components/LevelUpModal';
 import AchievementToast from './components/AchievementToast';
 import Confetti from './components/Confetti';
+import FlashcardRenderer from './components/FlashcardRenderer';
 
 type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
 type FlashcardMode = 'hebrew-to-english' | 'english-to-hebrew';
@@ -295,16 +296,47 @@ export default function VocabularyPage() {
   const getCategoryEmoji = (category: string): string => {
     const emojiMap: Record<string, string> = {
       'Noun': '📦',
+      'Nouns': '📦',
       'Verb': '⚡',
+      'Verbs': '⚡',
       'Adjective': '🎨',
       'Preposition': '🔗',
+      'Prepositions': '🔗',
       'Particle': '✨',
+      'Particles': '✨',
       'Number': '🔢',
       'Pronoun': '👤',
       'Adverb': '⏩',
       'Conjunction': '➕',
+      'Conjunctions': '➕',
+      'Articles': '📰',
+      'Combined Forms': '🔀',
+      'Punctuation': '.',
+      'Consonants': 'א',
+      'Vowels': '◌ָ',
+      'Syllables': '🎯',
     };
     return emojiMap[category] || '📝';
+  };
+
+  const getSetTypeIcon = (setType?: string): string => {
+    const iconMap: Record<string, string> = {
+      'vocabulary': '📚',
+      'alphabet': 'א',
+      'syllables': '🎯',
+      'grammar': '📖',
+    };
+    return iconMap[setType || 'vocabulary'] || '📚';
+  };
+
+  const getSetTypeLabel = (setType?: string): string => {
+    const labelMap: Record<string, string> = {
+      'vocabulary': 'Vocabulary',
+      'alphabet': 'Alphabet',
+      'syllables': 'Syllables',
+      'grammar': 'Grammar',
+    };
+    return labelMap[setType || 'vocabulary'] || 'Vocabulary';
   };
 
   // Flashcard functions
@@ -742,8 +774,18 @@ export default function VocabularyPage() {
                       </div>
                     )}
 
+                    {/* Set Type Badge */}
+                    {(set as any).setType && (set as any).setType !== 'vocabulary' && (
+                      <div className="inline-block px-3 py-1 bg-[#4a5d49]/10 text-[#4a5d49] text-xs font-bold rounded-full mb-3 ml-2">
+                        {getSetTypeIcon((set as any).setType)} {getSetTypeLabel((set as any).setType)}
+                      </div>
+                    )}
+
                     {/* Set Info */}
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2">{set.title}</h3>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                      <span className="text-2xl">{getSetTypeIcon((set as any).setType)}</span>
+                      <span>{set.title}</span>
+                    </h3>
                     <p className="text-sm text-gray-600 mb-4">{set.description}</p>
 
                     {/* Stats */}
@@ -945,51 +987,62 @@ export default function VocabularyPage() {
 
               {/* Flashcard */}
               {currentCard && (
-                <div
-                  className={`bg-white rounded-3xl shadow-2xl border-2 transition-all duration-500 cursor-pointer hover:shadow-3xl mb-6 min-h-[400px] flex items-center justify-center ${
-                    isFlipped ? 'border-[#d4c5b0] bg-gradient-to-br from-pink-50 to-purple-50' : 'border-[#d4c5b0]'
-                  }`}
-                  onClick={flipCard}
-                >
-                  {!isFlipped ? (
-                    // Front of card
-                    <div className="p-12 text-center">
-                      {flashcardMode === 'hebrew-to-english' ? (
-                        <div
-                          className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {currentCard.hebrew}
+                <div className="mb-6">
+                  {/* Use FlashcardRenderer for special card types, or inline for vocab with direction */}
+                  {currentCard.cardType && currentCard.cardType !== 'vocabulary' ? (
+                    <FlashcardRenderer
+                      word={currentCard}
+                      isFlipped={isFlipped}
+                      onFlip={flipCard}
+                    />
+                  ) : (
+                    <div
+                      className={`bg-white rounded-3xl shadow-2xl border-2 transition-all duration-500 cursor-pointer hover:shadow-3xl min-h-[400px] flex items-center justify-center ${
+                        isFlipped ? 'border-[#d4c5b0] bg-gradient-to-br from-pink-50 to-purple-50' : 'border-[#d4c5b0]'
+                      }`}
+                      onClick={flipCard}
+                    >
+                      {!isFlipped ? (
+                        // Front of card
+                        <div className="p-12 text-center">
+                          {flashcardMode === 'hebrew-to-english' ? (
+                            <div
+                              className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {currentCard.hebrew}
+                            </div>
+                          ) : (
+                            <div className="text-5xl md:text-6xl font-bold text-gray-900">
+                              {currentCard.english}
+                            </div>
+                          )}
+                          <div className="text-gray-400 italic text-lg mt-6">
+                            Click to reveal answer
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-5xl md:text-6xl font-bold text-gray-900">
-                          {currentCard.english}
+                        // Back of card
+                        <div className="p-12 text-center">
+                          <div
+                            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {flashcardMode === 'hebrew-to-english' ? currentCard.english : (
+                              <span className="font-[family-name:var(--font-hebrew)]">{currentCard.hebrew}</span>
+                            )}
+                          </div>
+                          <div className="text-2xl text-gray-600 italic mb-4">
+                            ({currentCard.trans})
+                          </div>
+                          <div className="text-lg text-gray-700 font-medium mb-4">
+                            {currentCard.type}
+                          </div>
+                          <div className="text-base text-gray-600 leading-relaxed">
+                            {currentCard.notes}
+                          </div>
                         </div>
                       )}
-                      <div className="text-gray-400 italic text-lg mt-6">
-                        Click to reveal answer
-                      </div>
-                    </div>
-                  ) : (
-                    // Back of card
-                    <div className="p-12 text-center">
-                      <div
-                        className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {flashcardMode === 'hebrew-to-english' ? currentCard.english : (
-                          <span className="font-[family-name:var(--font-hebrew)]">{currentCard.hebrew}</span>
-                        )}
-                      </div>
-                      <div className="text-2xl text-gray-600 italic mb-4">
-                        ({currentCard.trans})
-                      </div>
-                      <div className="text-lg text-gray-700 font-medium mb-4">
-                        {currentCard.type}
-                      </div>
-                      <div className="text-base text-gray-600 leading-relaxed">
-                        {currentCard.notes}
-                      </div>
                     </div>
                   )}
                 </div>

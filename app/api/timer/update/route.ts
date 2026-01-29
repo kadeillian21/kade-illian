@@ -1,0 +1,68 @@
+/**
+ * POST /api/timer/update
+ *
+ * Updates today's study time
+ */
+
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
+
+// Ensure table exists (runs once)
+let tableCreated = false;
+
+async function ensureTable(sql: ReturnType<typeof getDb>) {
+  if (tableCreated) return;
+  await sql`
+    CREATE TABLE IF NOT EXISTS study_sessions (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL DEFAULT CURRENT_DATE,
+      total_seconds INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(date)
+    )
+  `;
+  tableCreated = true;
+}
+
+export async function POST(request: Request) {
+  const sql = getDb();
+
+  try {
+    await ensureTable(sql);
+
+    const body = await request.json();
+    const { additionalSeconds } = body;
+
+    if (typeof additionalSeconds !== 'number' || additionalSeconds < 0) {
+      return NextResponse.json(
+        { error: 'Invalid additionalSeconds value' },
+        { status: 400 }
+      );
+    }
+
+    // Get today's date
+    const today = new Date().toISOString().split('T')[0];
+
+    // Upsert: insert new row or update existing
+    const result = await sql`
+      INSERT INTO study_sessions (date, total_seconds, updated_at)
+      VALUES (${today}::date, ${additionalSeconds}, NOW())
+      ON CONFLICT (date) DO UPDATE
+      SET total_seconds = study_sessions.total_seconds + ${additionalSeconds},
+          updated_at = NOW()
+      RETURNING total_seconds
+    `;
+
+    return NextResponse.json({
+      success: true,
+      totalSeconds: result[0].total_seconds,
+    });
+  } catch (error) {
+    console.error('Error updating timer:', error);
+    return NextResponse.json(
+      { error: 'Failed to update timer' },
+      { status: 500 }
+    );
+  }
+}

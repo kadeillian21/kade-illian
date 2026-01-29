@@ -5,6 +5,34 @@
  * Hebrew vocabulary with spaced repetition metadata.
  */
 
+// Card type for different learning content
+export type CardType = 'vocabulary' | 'alphabet' | 'syllable' | 'grammar';
+
+// Set type for categorizing vocab sets
+export type SetType = 'vocabulary' | 'alphabet' | 'syllables' | 'grammar';
+
+// Extra data stored as JSONB for different card types
+export interface AlphabetExtraData {
+  pronunciation: string;    // How to pronounce the name (e.g., "AH-lef")
+  sound: string;            // The sound it makes (e.g., "(silent)")
+}
+
+export interface SyllableExtraData {
+  syllables: string;        // Syllable breakdown (e.g., "שָׁ־לוֹם")
+  pronunciation: string;    // Full pronunciation (e.g., "sha-LOM")
+  syllableType: string;     // Type description (e.g., "Open + closed syllables")
+}
+
+export interface GrammarExtraData {
+  pronunciation: string;    // Pronunciation (e.g., "ha-")
+  grammarType: string;      // Specific type (e.g., "Definite Article (with patach)")
+  category: string;         // Category (e.g., "Articles")
+  explanation: string;      // Detailed explanation
+  examples: string[];       // Usage examples
+}
+
+export type ExtraData = AlphabetExtraData | SyllableExtraData | GrammarExtraData | Record<string, unknown>;
+
 // Core vocabulary word structure
 export interface HebrewVocabWord {
   // Basic word data (existing fields)
@@ -18,6 +46,10 @@ export interface HebrewVocabWord {
   id: string;               // Unique identifier (e.g., "gen1-elohim")
   semanticGroup: string;    // Semantic category (e.g., "deity", "nature-elements")
   frequency?: number;       // Word frequency rank (1 = most common, optional)
+
+  // Card type metadata
+  cardType?: CardType;      // Type of card (vocabulary, alphabet, etc.)
+  extraData?: ExtraData;    // Type-specific extra data
 
   // Spaced repetition metadata (for localStorage tracking)
   level?: number;           // 0=new, 1-5=review stages
@@ -47,6 +79,7 @@ export interface VocabSet {
   dateAdded: string;        // ISO date when added
   totalWords: number;       // Total word count
   groups: VocabGroup[];     // Organized word groups
+  setType?: SetType;        // Type of set (vocabulary, alphabet, syllables, grammar)
 }
 
 // Word group within a vocab set

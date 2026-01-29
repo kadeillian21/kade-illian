@@ -18,6 +18,8 @@ interface WordInput {
   frequency?: number;
   category: string;
   subcategory?: string;
+  cardType?: string;
+  extraData?: Record<string, unknown>;
 }
 
 export async function POST(request: NextRequest) {
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { setId, title, description, words } = body;
+    const { setId, title, description, words, setType } = body;
 
     // Validate required fields
     if (!setId || !title || !words || !Array.isArray(words)) {
@@ -59,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     // 1. Insert vocab set
     await sql`
-      INSERT INTO vocab_sets (id, title, description, total_words, is_active)
-      VALUES (${setId}, ${title}, ${description || ''}, ${words.length}, false)
+      INSERT INTO vocab_sets (id, title, description, total_words, is_active, set_type)
+      VALUES (${setId}, ${title}, ${description || ''}, ${words.length}, false, ${setType || 'vocabulary'})
     `;
 
     // 2. Insert all words
@@ -92,7 +94,9 @@ export async function POST(request: NextRequest) {
           frequency,
           set_id,
           group_category,
-          group_subcategory
+          group_subcategory,
+          card_type,
+          extra_data
         ) VALUES (
           ${wordId},
           ${word.hebrew},
@@ -104,7 +108,9 @@ export async function POST(request: NextRequest) {
           ${word.frequency || null},
           ${setId},
           ${word.category},
-          ${word.subcategory || null}
+          ${word.subcategory || null},
+          ${word.cardType || 'vocabulary'},
+          ${JSON.stringify(word.extraData || {})}::jsonb
         )
       `;
 

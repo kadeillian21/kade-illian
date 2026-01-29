@@ -24,6 +24,8 @@ export default function AdminPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isReorganizing, setIsReorganizing] = useState(false);
   const [reorganizeResult, setReorganizeResult] = useState<any>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
 
   const handlePreview = () => {
     setError('');
@@ -131,6 +133,35 @@ export default function AdminPage() {
     }
   };
 
+  // Seed alphabet, syllables, and grammar categories
+  const handleSeedCategories = async () => {
+    setIsSeeding(true);
+    setSeedResult(null);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/vocab/seed-categories', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to seed categories');
+        setIsSeeding(false);
+        return;
+      }
+
+      setSeedResult(data.results);
+      setSuccess('Categories seeded successfully!');
+    } catch (err) {
+      setError('Failed to seed categories');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   // Auto-generate setId from title
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
@@ -213,10 +244,10 @@ export default function AdminPage() {
           {/* Reorganize Result */}
           {reorganizeResult && (
             <div className="mt-4 p-4 bg-white rounded-lg border border-orange-300">
-              <p className="font-semibold text-green-700 mb-2">✅ {reorganizeResult.message}</p>
+              <p className="font-semibold text-green-700 mb-2">{reorganizeResult.message}</p>
               {reorganizeResult.sets && reorganizeResult.sets.map((set: any, idx: number) => (
                 <div key={idx} className="mt-2 text-sm">
-                  <p className="font-mono text-gray-800">{set.setId}: {set.wordsUpdated} words → {set.numGroups} groups</p>
+                  <p className="font-mono text-gray-800">{set.setId}: {set.wordsUpdated} words - {set.numGroups} groups</p>
                   {set.groups && set.groups.map((group: any, gIdx: number) => (
                     <p key={gIdx} className="ml-4 text-gray-600">
                       - {group.category} {group.subcategory ? `(${group.subcategory})` : ''}: {group.wordCount} words
@@ -224,6 +255,34 @@ export default function AdminPage() {
                   ))}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Seed Categories Section */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 shadow-lg mb-6 border-2 border-purple-200">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Seed Learning Categories</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Add Alphabet (41 chars), Syllables (20 words), and Grammar Markers (31 patterns) to your vocabulary library.
+          </p>
+          <button
+            onClick={handleSeedCategories}
+            disabled={isSeeding}
+            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+          >
+            {isSeeding ? 'Seeding...' : 'Seed Alphabet, Syllables & Grammar'}
+          </button>
+          {seedResult && (
+            <div className="mt-4 text-sm text-gray-700">
+              <p>Results:</p>
+              <ul className="list-disc list-inside ml-2">
+                {seedResult.alphabet?.success && <li>Alphabet: {seedResult.alphabet.words} cards added</li>}
+                {seedResult.syllables?.success && <li>Syllables: {seedResult.syllables.words} cards added</li>}
+                {seedResult.grammar?.success && <li>Grammar: {seedResult.grammar.words} cards added</li>}
+                {!seedResult.alphabet?.success && !seedResult.syllables?.success && !seedResult.grammar?.success && (
+                  <li>All categories already exist</li>
+                )}
+              </ul>
             </div>
           )}
         </div>
