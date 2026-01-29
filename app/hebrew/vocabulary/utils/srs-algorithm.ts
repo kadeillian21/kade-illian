@@ -29,8 +29,8 @@ export function calculateNextReview(
     // Move up to next level (max 6)
     newLevel = Math.min(currentLevel + 1, 6);
   } else {
-    // Move back one level (min 1, or 0 if it's a new word)
-    newLevel = Math.max(currentLevel > 0 ? currentLevel - 1 : 0, 1);
+    // Move back one level (min 0 - stays new if you got it wrong)
+    newLevel = Math.max(currentLevel - 1, 0);
   }
 
   const intervalDays = SRS_INTERVALS[newLevel as keyof typeof SRS_INTERVALS];

@@ -9,6 +9,10 @@ import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress } from './data/type
 import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
 import { suggestStudyDays } from './utils/organizer-v2';
 import ProgressDashboard from './components/ProgressDashboard';
+import PersistentStatsBar from './components/PersistentStatsBar';
+import LevelUpModal from './components/LevelUpModal';
+import AchievementToast from './components/AchievementToast';
+import Confetti from './components/Confetti';
 
 type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
 type FlashcardMode = 'hebrew-to-english' | 'english-to-hebrew';
@@ -25,6 +29,14 @@ export default function VocabularyPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [progress, setProgress] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [cardsStudiedThisSession, setCardsStudiedThisSession] = useState(0);
+  const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+  const [showIncorrectFeedback, setShowIncorrectFeedback] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [newLevel, setNewLevel] = useState(1);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Helper: Refresh progress data for words after update
   // Words now come from DB with progress already attached, but we need to
@@ -126,22 +138,43 @@ export default function VocabularyPage() {
     );
   };
 
-  const handleSetActive = async (setId: string) => {
+  // Toggle set active status (allows multiple active sets)
+  const toggleSetActive = async (setId: string) => {
     try {
-      // Call API to activate set
-      await fetch(`/api/vocab/sets/${setId}/activate`, { method: 'POST' });
+      const response = await fetch('/api/vocab/sets/toggle-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setId }),
+      });
 
-      // Update local state
-      setActiveSetIdState(setId);
+      if (response.ok) {
+        const data = await response.json();
 
-      // Update vocabSets state
-      setVocabSets(prev => prev.map(s => ({
-        ...s,
-        isActive: s.id === setId,
-      })));
+        // Update vocabSets state
+        setVocabSets(prev => prev.map(s => ({
+          ...s,
+          isActive: s.id === setId ? data.isActive : s.isActive,
+        })));
+      }
     } catch (error) {
-      console.error('Error activating set:', error);
+      console.error('Error toggling set:', error);
     }
+  };
+
+  // Get all active sets
+  const getActiveSets = () => {
+    return vocabSets.filter(set => set.isActive);
+  };
+
+  // Get all due words from active sets only
+  const getDueWordsFromActiveSets = () => {
+    const activeSets = getActiveSets();
+    if (activeSets.length === 0) return getAllDueWords();
+
+    const activeWords = activeSets.flatMap(set =>
+      (set.groups || []).flatMap(group => group.words || [])
+    );
+    return getDueWords(activeWords);
   };
 
   const viewSetDetail = async (set: VocabSet) => {
@@ -158,6 +191,62 @@ export default function VocabularyPage() {
       setViewMode('set-detail');
     }
   };
+
+  // Session management
+  const startSession = async () => {
+    try {
+      const response = await fetch('/api/vocab/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setId: selectedSet?.id || null,
+          mode: 'study',
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSessionId(data.sessionId);
+        setCardsStudiedThisSession(0);
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
+    }
+  };
+
+  const endSession = async () => {
+    if (!sessionId) return;
+
+    try {
+      await fetch('/api/vocab/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          cardsStudied: cardsStudiedThisSession,
+        }),
+      });
+      setSessionId(null);
+      setCardsStudiedThisSession(0);
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+  };
+
+  // Auto-start session when entering flashcard mode
+  useEffect(() => {
+    if ((viewMode === 'flashcards' || viewMode === 'review') && !sessionId) {
+      startSession();
+    }
+  }, [viewMode]);
+
+  // Auto-end session when leaving study mode
+  useEffect(() => {
+    return () => {
+      if (sessionId) {
+        endSession();
+      }
+    };
+  }, [sessionId]);
 
   const startStudying = (group: VocabGroup, mode: FlashcardMode) => {
     setSelectedGroup(group);
@@ -182,7 +271,7 @@ export default function VocabularyPage() {
   };
 
   const startReviewMode = () => {
-    const dueWords = getAllDueWords();
+    const dueWords = getDueWordsFromActiveSets();
     setCards(dueWords);
     setCurrentIndex(0);
     setIsFlipped(false);
@@ -243,8 +332,15 @@ export default function VocabularyPage() {
   const handleCorrect = async () => {
     if (!currentCard) return;
 
+    // Show positive feedback
+    setShowCorrectFeedback(true);
+    setTimeout(() => setShowCorrectFeedback(false), 1000);
+
     // Calculate next review with SRS algorithm
     const updatedWord = calculateNextReview(currentCard, true);
+
+    // Increment cards studied counter
+    setCardsStudiedThisSession(prev => prev + 1);
 
     // Update database via API
     try {
@@ -280,6 +376,67 @@ export default function VocabularyPage() {
             },
           },
         }));
+
+        // 🎉 Award XP for correct answer!
+        try {
+          const xpResponse = await fetch('/api/vocab/xp/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              xpAmount: 10, // 10 XP per correct card
+              reason: 'correct_answer',
+            }),
+          });
+
+          if (xpResponse.ok) {
+            const xpData = await xpResponse.json();
+
+            // Check for level up!
+            if (xpData.leveledUp) {
+              setNewLevel(xpData.newLevel);
+              setShowLevelUp(true);
+            }
+
+            // Check for new achievements!
+            if (xpData.unlockedAchievements && xpData.unlockedAchievements.length > 0) {
+              setAchievements(prev => [...prev, ...xpData.unlockedAchievements]);
+            }
+
+            // Update stats with new XP/level
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                xp: xpData.totalXP,
+                level: xpData.level,
+              },
+            }));
+          }
+        } catch (xpError) {
+          console.error('Error awarding XP:', xpError);
+        }
+
+        // Update daily goal progress
+        try {
+          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardsStudied: 1 }),
+          });
+
+          if (goalResponse.ok) {
+            const goalData = await goalResponse.json();
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                cardsToday: goalData.cardsToday,
+              },
+            }));
+          }
+        } catch (goalError) {
+          console.error('Error updating daily goal:', goalError);
+        }
       }
     } catch (error) {
       console.error('Error updating progress:', error);
@@ -291,19 +448,30 @@ export default function VocabularyPage() {
     setCards(updatedCards);
 
     // Auto-advance to next card
-    if (currentIndex < cards.length - 1) {
-      nextCard();
-    } else {
-      // Last card - show completion
-      setIsFlipped(false);
-    }
+    setTimeout(() => {
+      if (currentIndex < cards.length - 1) {
+        nextCard();
+      } else {
+        // 🎉 Last card - session complete! Trigger confetti!
+        setShowConfetti(true);
+        setTimeout(() => endSession(), 2000);
+        setIsFlipped(false);
+      }
+    }, 500);
   };
 
   const handleIncorrect = async () => {
     if (!currentCard) return;
 
+    // Show negative feedback
+    setShowIncorrectFeedback(true);
+    setTimeout(() => setShowIncorrectFeedback(false), 1000);
+
     // Calculate next review with SRS algorithm (marked incorrect)
     const updatedWord = calculateNextReview(currentCard, false);
+
+    // Increment cards studied counter
+    setCardsStudiedThisSession(prev => prev + 1);
 
     // Update database via API
     try {
@@ -339,6 +507,28 @@ export default function VocabularyPage() {
             },
           },
         }));
+
+        // Update daily goal progress (even for incorrect - you still studied!)
+        try {
+          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardsStudied: 1 }),
+          });
+
+          if (goalResponse.ok) {
+            const goalData = await goalResponse.json();
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                cardsToday: goalData.cardsToday,
+              },
+            }));
+          }
+        } catch (goalError) {
+          console.error('Error updating daily goal:', goalError);
+        }
       }
     } catch (error) {
       console.error('Error updating progress:', error);
@@ -350,12 +540,16 @@ export default function VocabularyPage() {
     setCards(updatedCards);
 
     // Auto-advance to next card
-    if (currentIndex < cards.length - 1) {
-      nextCard();
-    } else {
-      // Last card - show completion
-      setIsFlipped(false);
-    }
+    setTimeout(() => {
+      if (currentIndex < cards.length - 1) {
+        nextCard();
+      } else {
+        // 🎉 Last card - session complete! Trigger confetti!
+        setShowConfetti(true);
+        setTimeout(() => endSession(), 2000);
+        setIsFlipped(false);
+      }
+    }, 500);
   };
 
 
@@ -377,24 +571,72 @@ export default function VocabularyPage() {
   }, [currentIndex, cards.length, viewMode]);
 
   const currentCard = cards[currentIndex];
-  const totalDueWords = getAllDueWords().length;
+  const totalDueWords = getDueWordsFromActiveSets().length;
+  const activeSetsCount = getActiveSets().length;
+
+  // Gamification UI (rendered above everything)
+  const gamificationUI = (
+    <>
+      {/* Level Up Modal */}
+      {showLevelUp && (
+        <LevelUpModal
+          level={newLevel}
+          onClose={() => setShowLevelUp(false)}
+        />
+      )}
+
+      {/* Achievement Toasts */}
+      {achievements.map((achievement, index) => (
+        <AchievementToast
+          key={`${achievement.id}-${index}`}
+          achievement={achievement}
+          onClose={() => {
+            setAchievements(prev => prev.filter((_, i) => i !== index));
+          }}
+        />
+      ))}
+
+      {/* Confetti on session complete */}
+      <Confetti
+        active={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+      />
+    </>
+  );
 
   // VIEW: Dashboard (Progress & Stats)
   if (viewMode === 'dashboard' && progress) {
     return (
-      <ProgressDashboard
-        progress={progress}
-        allWords={getAllWords()}
-        onStartStudy={returnToLibrary}
-      />
+      <>
+        {gamificationUI}
+        <PersistentStatsBar
+          sessionId={sessionId}
+          onStartSession={startSession}
+          progress={progress}
+        />
+        <div className="pt-20">
+          <ProgressDashboard
+            progress={progress}
+            allWords={getAllWords()}
+            onStartStudy={returnToLibrary}
+          />
+        </div>
+      </>
     );
   }
 
   // VIEW: Library (Landing Page)
   if (viewMode === 'library') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
+      <>
+        {gamificationUI}
+        <PersistentStatsBar
+          sessionId={sessionId}
+          onStartSession={startSession}
+          progress={progress}
+        />
+        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] pt-20">
+          <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
           {/* Header */}
           <div className="text-center mb-8">
             <Link
@@ -439,7 +681,19 @@ export default function VocabularyPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold text-orange-900 mb-1">Review Due</h3>
-                  <p className="text-orange-700">You have {totalDueWords} word{totalDueWords !== 1 ? 's' : ''} ready for review</p>
+                  <p className="text-orange-700">
+                    You have {totalDueWords} word{totalDueWords !== 1 ? 's' : ''} ready for review
+                    {activeSetsCount > 0 && (
+                      <span className="text-orange-600">
+                        {' '}from {activeSetsCount} active set{activeSetsCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </p>
+                  {activeSetsCount === 0 && (
+                    <p className="text-orange-600 text-sm mt-1">
+                      💡 Tip: Mark sets as "Active" to focus your reviews
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={startReviewMode}
@@ -454,11 +708,18 @@ export default function VocabularyPage() {
           {/* Vocab Sets */}
           {!isLoading && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Vocabulary Sets</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Vocabulary Sets</h2>
+                {activeSetsCount > 0 && (
+                  <div className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-semibold text-sm">
+                    {activeSetsCount} Active Set{activeSetsCount !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {vocabSets.map((set) => {
                   const stats = getSetStats(set);
-                  const isActive = set.id === activeSetId;
+                  const isActive = set.isActive;
 
                 return (
                   <div
@@ -470,7 +731,7 @@ export default function VocabularyPage() {
                     {/* Active Badge */}
                     {isActive && (
                       <div className="inline-block px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full mb-3">
-                        ACTIVE THIS WEEK
+                        ✓ ACTIVE
                       </div>
                     )}
 
@@ -499,21 +760,23 @@ export default function VocabularyPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 items-center">
                       <button
                         onClick={() => viewSetDetail(set)}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                       >
                         Study
                       </button>
-                      {!isActive && (
-                        <button
-                          onClick={() => handleSetActive(set.id)}
-                          className="px-4 py-2 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border border-gray-300"
-                        >
-                          Set Active
-                        </button>
-                      )}
+                      <button
+                        onClick={() => toggleSetActive(set.id)}
+                        className={`px-4 py-2 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
+                          isActive
+                            ? 'bg-green-500 text-white border-green-600'
+                            : 'bg-white text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        {isActive ? '✓ Active' : 'Set Active'}
+                      </button>
                     </div>
                   </div>
                 );
@@ -521,15 +784,18 @@ export default function VocabularyPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // VIEW: Set Detail (Organized Groups)
   if (viewMode === 'set-detail' && selectedSet) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+      <>
+        {gamificationUI}
+        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
         <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-4xl">
           {/* Header */}
           <div className="text-center mb-8">
@@ -603,6 +869,7 @@ export default function VocabularyPage() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
@@ -625,8 +892,10 @@ export default function VocabularyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-      <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto">
+    <>
+      {gamificationUI}
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
@@ -789,6 +1058,7 @@ export default function VocabularyPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
