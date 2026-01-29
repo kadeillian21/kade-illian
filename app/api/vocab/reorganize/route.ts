@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { HebrewVocabWord, VocabGroup } from '../../hebrew/vocabulary/data/types';
-import { organizeVocabularyV2 } from '../../../hebrew/vocabulary/utils/organizer-v2';
+import { HebrewVocabWord, VocabGroup } from '@/app/hebrew/vocabulary/data/types';
+import { organizeVocabularyV2 } from '@/app/hebrew/vocabulary/utils/organizer-v2';
 
 export async function POST(request: NextRequest) {
   const sql = getDb();

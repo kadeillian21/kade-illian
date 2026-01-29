@@ -80,6 +80,7 @@ export interface VocabSet {
   totalWords: number;       // Total word count
   groups: VocabGroup[];     // Organized word groups
   setType?: SetType;        // Type of set (vocabulary, alphabet, syllables, grammar)
+  isActive?: boolean;       // Whether this set is the active study set
 }
 
 // Word group within a vocab set
