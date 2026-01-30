@@ -103,18 +103,18 @@ export default function VocabularyPage() {
   // Calculate stats for each vocab set
   const getSetStats = (set: VocabSet) => {
     if (!set.groups || set.groups.length === 0) {
-      return { total: 0, new: 0, due: 0 };
+      return { total: 0, toStudy: 0, learned: 0 };
     }
 
     // Words already have progress data from DB
     const allWords = set.groups.flatMap(g => g.words || []);
-    const newWords = getNewWords(allWords);
-    const dueWords = getDueWords(allWords);
+    const wordsToStudy = getWordsToStudy(allWords); // level 0 + due for review
+    const learnedWords = allWords.filter(w => (w.level || 0) >= 1);
 
     return {
       total: allWords.length,
-      new: newWords.length,
-      due: dueWords.length,
+      toStudy: wordsToStudy.length,
+      learned: learnedWords.length,
     };
   };
 
@@ -700,11 +700,16 @@ export default function VocabularyPage() {
   }, [currentIndex, cards.length, viewMode]);
 
   const currentCard = cards[currentIndex];
-  const wordsToStudy = getWordsToStudyFromActiveSets();
-  const totalWordsToStudy = wordsToStudy.length;
-  const newWordsCount = wordsToStudy.filter(w => !w.level || w.level === 0).length;
-  const dueWordsCount = wordsToStudy.filter(w => w.level && w.level > 0).length;
-  const activeSetsCount = getActiveSets().length;
+  const activeSets = getActiveSets();
+  const activeSetsCount = activeSets.length;
+
+  // Get stats for active sets only
+  const activeSetWords = activeSets.flatMap(set =>
+    (set.groups || []).flatMap(group => group.words || [])
+  );
+  const totalWordsToStudy = getWordsToStudy(activeSetWords).length;
+  const totalWordsLearned = activeSetWords.filter(w => (w.level || 0) >= 1).length;
+  const totalActiveWords = activeSetWords.length;
 
   // Gamification UI (rendered above everything)
   const gamificationUI = (
@@ -809,22 +814,7 @@ export default function VocabularyPage() {
                 <div>
                   <h3 className="text-2xl font-bold text-orange-900 mb-1">Ready to Study</h3>
                   <p className="text-orange-700">
-                    {newWordsCount > 0 && dueWordsCount > 0 && (
-                      <>
-                        You have {newWordsCount} new word{newWordsCount !== 1 ? 's' : ''} and{' '}
-                        {dueWordsCount} word{dueWordsCount !== 1 ? 's' : ''} due for review
-                      </>
-                    )}
-                    {newWordsCount > 0 && dueWordsCount === 0 && (
-                      <>
-                        You have {newWordsCount} new word{newWordsCount !== 1 ? 's' : ''} to learn
-                      </>
-                    )}
-                    {newWordsCount === 0 && dueWordsCount > 0 && (
-                      <>
-                        You have {dueWordsCount} word{dueWordsCount !== 1 ? 's' : ''} due for review
-                      </>
-                    )}
+                    You have {totalWordsToStudy} word{totalWordsToStudy !== 1 ? 's' : ''} to study
                     {activeSetsCount > 0 && (
                       <span className="text-orange-600">
                         {' '}from {activeSetsCount} active set{activeSetsCount !== 1 ? 's' : ''}
@@ -897,16 +887,16 @@ export default function VocabularyPage() {
                         <span className="text-gray-600">Total:</span>
                         <span className="font-bold text-gray-800">{stats.total}</span>
                       </div>
-                      {stats.new > 0 && (
+                      {stats.toStudy > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-blue-600">New:</span>
-                          <span className="font-bold text-blue-700">{stats.new}</span>
+                          <span className="text-orange-600">To Study:</span>
+                          <span className="font-bold text-orange-700">{stats.toStudy}</span>
                         </div>
                       )}
-                      {stats.due > 0 && (
+                      {stats.learned > 0 && (
                         <div className="flex items-center gap-1">
-                          <span className="text-orange-600">Due:</span>
-                          <span className="font-bold text-orange-700">{stats.due}</span>
+                          <span className="text-green-600">Learned:</span>
+                          <span className="font-bold text-green-700">{stats.learned}</span>
                         </div>
                       )}
                     </div>
@@ -968,43 +958,48 @@ export default function VocabularyPage() {
             <p className="text-lg text-gray-600">{selectedSet.description}</p>
           </div>
 
-          {/* Quick Study Options - New, Due, & Weak Words */}
+          {/* Quick Study Options - Words to Study */}
           {(() => {
             const allWords = selectedSet.groups.flatMap(g => g.words);
-            const newWords = getNewWords(allWords);
-            const dueWords = getDueWords(allWords);
+            const wordsToStudy = getWordsToStudy(allWords);
             const weakWords = allWords.filter(word => (word.level || 0) <= 2);
 
-            return (newWords.length > 0 || dueWords.length > 0 || weakWords.length > 0) && (
+            return (wordsToStudy.length > 0 || weakWords.length > 0) && (
               <div className="mb-8 space-y-4">
-                {/* Study New Words */}
-                {newWords.length > 0 && (
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 shadow-lg border-2 border-blue-200">
+                {/* Study All Words That Need Attention */}
+                {wordsToStudy.length > 0 && (
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 shadow-lg border-2 border-orange-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-xl font-bold text-blue-900 mb-1">Learn New Words</h3>
-                        <p className="text-blue-700">
-                          {newWords.length} word{newWords.length !== 1 ? 's' : ''} you haven't learned yet
+                        <h3 className="text-xl font-bold text-orange-900 mb-1">Words to Study</h3>
+                        <p className="text-orange-700">
+                          {wordsToStudy.length} word{wordsToStudy.length !== 1 ? 's' : ''} ready to learn or review
                         </p>
                       </div>
                       <button
-                        onClick={() => studyNewWords('hebrew-to-english')}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                        onClick={() => {
+                          setCards(wordsToStudy);
+                          setCurrentIndex(0);
+                          setIsFlipped(false);
+                          setFlashcardMode('hebrew-to-english');
+                          setViewMode('flashcards');
+                        }}
+                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-yellow-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                       >
-                        Start Learning
+                        Start Studying
                       </button>
                     </div>
                   </div>
                 )}
 
                 {/* Practice Weak Words - Words you're struggling with */}
-                {weakWords.length > 0 && weakWords.length !== newWords.length && (
+                {weakWords.length > 0 && weakWords.length !== wordsToStudy.length && (
                   <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-6 shadow-lg border-2 border-red-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-xl font-bold text-red-900 mb-1">Practice Weak Words</h3>
+                        <h3 className="text-xl font-bold text-red-900 mb-1">Practice Difficult Words</h3>
                         <p className="text-red-700">
-                          {weakWords.length} word{weakWords.length !== 1 ? 's' : ''} you're still learning (level 0-2)
+                          {weakWords.length} word{weakWords.length !== 1 ? 's' : ''} you're still working on (level 0-2)
                         </p>
                       </div>
                       <button
@@ -1012,26 +1007,6 @@ export default function VocabularyPage() {
                         className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                       >
                         Practice Now
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Review Due Words */}
-                {dueWords.length > 0 && (
-                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 shadow-lg border-2 border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold text-orange-900 mb-1">Review Due</h3>
-                        <p className="text-orange-700">
-                          {dueWords.length} word{dueWords.length !== 1 ? 's' : ''} ready for review from this set
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => studyDueWords('hebrew-to-english')}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-yellow-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                      >
-                        Start Review
                       </button>
                     </div>
                   </div>

@@ -7,7 +7,7 @@ interface Stats {
   streak: number;
   wordsLearned: number;
   totalWords: number;
-  dueWords: number;
+  wordsToStudy: number;
 }
 
 export default function HebrewStatsNavbar() {
@@ -23,7 +23,7 @@ export default function HebrewStatsNavbar() {
     streak: 0,
     wordsLearned: 0,
     totalWords: 0,
-    dueWords: 0,
+    wordsToStudy: 0,
   });
 
   // Format seconds to MM:SS or HH:MM:SS
@@ -69,49 +69,52 @@ export default function HebrewStatsNavbar() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Fetch user progress for streak and learning stats
+        // Fetch vocab sets first to get active sets
+        const setsRes = await fetch("/api/vocab/sets");
+        if (!setsRes.ok) return;
+
+        const setsData = await setsRes.json();
+
+        // Get only active sets
+        const activeSets = setsData.filter((set: any) => set.isActive);
+
+        // Get all words from active sets with their progress
+        const activeWords = activeSets.flatMap((set: any) =>
+          (set.groups || []).flatMap((group: any) => group.words || [])
+        );
+
+        // Calculate stats from active sets only
+        const totalWords = activeWords.length;
+        const learned = activeWords.filter((w: any) => (w.level || 0) >= 1).length;
+
+        // Calculate words to study (level 0 OR level 1+ that are due)
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const toStudy = activeWords.filter((w: any) => {
+          // Include level 0 words (need to learn)
+          if (!w.level || w.level === 0) return true;
+
+          // Include level 1+ words that are due for review
+          if (!w.nextReview) return true;
+          const reviewDate = new Date(w.nextReview);
+          reviewDate.setHours(0, 0, 0, 0);
+          return reviewDate <= now;
+        }).length;
+
+        // Fetch user stats for streak
         const progressRes = await fetch("/api/vocab/progress");
+        let streak = 0;
         if (progressRes.ok) {
           const progressData = await progressRes.json();
-          const wordProgress = progressData.wordProgress || {};
-
-          // Calculate learned words (level >= 1)
-          const learned = Object.values(wordProgress).filter(
-            (p: any) => p.level >= 1
-          ).length;
-
-          // Calculate due words (level 1+ only, not including new words)
-          const now = new Date();
-          now.setHours(0, 0, 0, 0); // Start of today
-          const dueCount = Object.values(wordProgress).filter((p: any) => {
-            // Skip new words (level 0) - they're not "due for review"
-            if (!p.level || p.level === 0) return false;
-            // Words at level 1+ without nextReview are due
-            if (!p.nextReview) return true;
-            // Check if nextReview date has passed
-            const reviewDate = new Date(p.nextReview);
-            reviewDate.setHours(0, 0, 0, 0);
-            return reviewDate <= now;
-          }).length;
-
-          setStats((prev) => ({
-            ...prev,
-            streak: progressData.stats?.streak || 0,
-            wordsLearned: learned,
-            dueWords: dueCount,
-          }));
+          streak = progressData.stats?.streak || 0;
         }
 
-        // Fetch total word count from sets
-        const setsRes = await fetch("/api/vocab/sets");
-        if (setsRes.ok) {
-          const setsData = await setsRes.json();
-          const totalWords = setsData.reduce(
-            (sum: number, set: any) => sum + (set.totalWords || 0),
-            0
-          );
-          setStats((prev) => ({ ...prev, totalWords }));
-        }
+        setStats({
+          streak,
+          wordsLearned: learned,
+          totalWords,
+          wordsToStudy: toStudy,
+        });
       } catch (error) {
         console.error("Failed to fetch stats:", error);
       }
@@ -226,13 +229,13 @@ export default function HebrewStatsNavbar() {
             </div>
           )}
 
-          {/* Due words */}
-          {stats.dueWords > 0 && (
+          {/* Words to study */}
+          {stats.wordsToStudy > 0 && (
             <Link
-              href="/hebrew/vocabulary?mode=review"
+              href="/hebrew/vocabulary"
               className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
             >
-              <span className="font-medium">{stats.dueWords} due</span>
+              <span className="font-medium">{stats.wordsToStudy} to study</span>
             </Link>
           )}
 
