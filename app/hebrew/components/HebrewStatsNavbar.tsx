@@ -7,7 +7,7 @@ interface Stats {
   streak: number;
   wordsLearned: number;
   totalWords: number;
-  wordsToStudy: number;
+  notLearned: number;
 }
 
 export default function HebrewStatsNavbar() {
@@ -23,7 +23,7 @@ export default function HebrewStatsNavbar() {
     streak: 0,
     wordsLearned: 0,
     totalWords: 0,
-    wordsToStudy: 0,
+    notLearned: 0,
   });
 
   // Format seconds to MM:SS or HH:MM:SS
@@ -86,20 +86,7 @@ export default function HebrewStatsNavbar() {
         // Calculate stats from active sets only
         const totalWords = activeWords.length;
         const learned = activeWords.filter((w: any) => (w.level || 0) >= 1).length;
-
-        // Calculate words to study (level 0 OR level 1+ that are due)
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const toStudy = activeWords.filter((w: any) => {
-          // Include level 0 words (need to learn)
-          if (!w.level || w.level === 0) return true;
-
-          // Include level 1+ words that are due for review
-          if (!w.nextReview) return true;
-          const reviewDate = new Date(w.nextReview);
-          reviewDate.setHours(0, 0, 0, 0);
-          return reviewDate <= now;
-        }).length;
+        const notLearned = activeWords.filter((w: any) => !w.level || w.level === 0).length;
 
         // Fetch user stats for streak
         const progressRes = await fetch("/api/vocab/progress");
@@ -113,7 +100,7 @@ export default function HebrewStatsNavbar() {
           streak,
           wordsLearned: learned,
           totalWords,
-          wordsToStudy: toStudy,
+          notLearned,
         });
       } catch (error) {
         console.error("Failed to fetch stats:", error);
@@ -229,13 +216,13 @@ export default function HebrewStatsNavbar() {
             </div>
           )}
 
-          {/* Words to study */}
-          {stats.wordsToStudy > 0 && (
+          {/* Not learned words */}
+          {stats.notLearned > 0 && (
             <Link
               href="/hebrew/vocabulary"
               className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
             >
-              <span className="font-medium">{stats.wordsToStudy} to study</span>
+              <span className="font-medium">{stats.notLearned} not learned</span>
             </Link>
           )}
 
