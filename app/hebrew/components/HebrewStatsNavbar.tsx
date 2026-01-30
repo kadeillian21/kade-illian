@@ -56,7 +56,9 @@ export default function HebrewStatsNavbar() {
   useEffect(() => {
     async function fetchTimer() {
       try {
-        const res = await fetch("/api/timer");
+        // Get user's timezone offset in minutes
+        const tzOffset = new Date().getTimezoneOffset();
+        const res = await fetch(`/api/timer?tzOffset=${tzOffset}`);
         if (res.ok) {
           const data = await res.json();
           setDailyTotalSeconds(data.totalSeconds || 0);
