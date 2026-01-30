@@ -19,16 +19,17 @@ export async function GET() {
 
   try {
     // Get today's study time for this user
-    const today = new Date().toISOString().split('T')[0];
-
+    // Use CURRENT_DATE in Postgres to get server's local date consistently
     const result = await sql`
       SELECT
         COALESCE(SUM(duration_seconds), 0) as total_seconds
       FROM study_sessions
       WHERE user_id = ${user.id}
-        AND DATE(start_time) = ${today}::date
+        AND DATE(start_time) = CURRENT_DATE
         AND end_time IS NOT NULL
     `;
+
+    const today = new Date().toISOString().split('T')[0];
 
     return NextResponse.json({
       date: today,

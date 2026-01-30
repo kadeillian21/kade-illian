@@ -49,7 +49,10 @@ export default function HebrewStatsNavbar() {
     return `${mins}m`;
   };
 
-  // Fetch initial timer data
+  // Track current date to detect day changes
+  const [currentDate, setCurrentDate] = useState(new Date().toDateString());
+
+  // Fetch initial timer data and refetch periodically
   useEffect(() => {
     async function fetchTimer() {
       try {
@@ -62,8 +65,30 @@ export default function HebrewStatsNavbar() {
         console.error("Failed to fetch timer:", error);
       }
     }
+
+    // Check if day changed
+    const checkDayChange = () => {
+      const now = new Date().toDateString();
+      if (now !== currentDate) {
+        setCurrentDate(now);
+        setDailyTotalSeconds(0);
+        setSessionSeconds(0);
+        setIsRunning(false);
+        fetchTimer();
+      }
+    };
+
+    // Fetch immediately
     fetchTimer();
-  }, []);
+
+    // Check for day changes every minute
+    const interval = setInterval(() => {
+      checkDayChange();
+      fetchTimer();
+    }, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [currentDate]);
 
   // Fetch stats data
   useEffect(() => {
@@ -106,7 +131,15 @@ export default function HebrewStatsNavbar() {
         console.error("Failed to fetch stats:", error);
       }
     }
+
+    // Fetch on mount
     fetchStats();
+
+    // Refetch when window regains focus
+    const handleFocus = () => fetchStats();
+    window.addEventListener("focus", handleFocus);
+
+    return () => window.removeEventListener("focus", handleFocus);
   }, []);
 
   // Save time to database
