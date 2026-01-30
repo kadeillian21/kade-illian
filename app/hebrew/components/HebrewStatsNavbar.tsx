@@ -80,11 +80,18 @@ export default function HebrewStatsNavbar() {
             (p: any) => p.level >= 1
           ).length;
 
-          // Calculate due words
+          // Calculate due words (level 1+ only, not including new words)
           const now = new Date();
+          now.setHours(0, 0, 0, 0); // Start of today
           const dueCount = Object.values(wordProgress).filter((p: any) => {
-            if (!p.nextReview) return p.level === 0;
-            return new Date(p.nextReview) <= now;
+            // Skip new words (level 0) - they're not "due for review"
+            if (!p.level || p.level === 0) return false;
+            // Words at level 1+ without nextReview are due
+            if (!p.nextReview) return true;
+            // Check if nextReview date has passed
+            const reviewDate = new Date(p.nextReview);
+            reviewDate.setHours(0, 0, 0, 0);
+            return reviewDate <= now;
           }).length;
 
           setStats((prev) => ({
@@ -100,7 +107,7 @@ export default function HebrewStatsNavbar() {
         if (setsRes.ok) {
           const setsData = await setsRes.json();
           const totalWords = setsData.reduce(
-            (sum: number, set: any) => sum + (set.total_words || 0),
+            (sum: number, set: any) => sum + (set.totalWords || 0),
             0
           );
           setStats((prev) => ({ ...prev, totalWords }));

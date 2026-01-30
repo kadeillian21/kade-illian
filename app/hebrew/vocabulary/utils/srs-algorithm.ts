@@ -48,22 +48,25 @@ export function calculateNextReview(
 }
 
 /**
- * Gets all words that are due for review today
+ * Gets all words that are due for review today (EXCLUDES new words)
+ *
+ * For new words (level 0), use getNewWords() instead.
+ * To get both new + due words, use getWordsToStudy().
  *
  * @param words - All vocabulary words
- * @returns Words that should be reviewed today
+ * @returns Words at level 1+ that need review today
  */
 export function getDueWords(words: HebrewVocabWord[]): HebrewVocabWord[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Start of today
 
   return words.filter((word) => {
-    // New words (level 0) are always due
+    // Skip new words (level 0) - use getNewWords() for those
     if (!word.level || word.level === 0) {
-      return true;
+      return false;
     }
 
-    // Words without nextReview are due
+    // Words at level 1+ without nextReview are due
     if (!word.nextReview) {
       return true;
     }
@@ -84,6 +87,20 @@ export function getDueWords(words: HebrewVocabWord[]): HebrewVocabWord[] {
  */
 export function getNewWords(words: HebrewVocabWord[]): HebrewVocabWord[] {
   return words.filter((word) => !word.level || word.level === 0);
+}
+
+/**
+ * Gets all words that need attention: new words + due reviews
+ *
+ * This is useful for showing total words to study (new learning + reviews)
+ *
+ * @param words - All vocabulary words
+ * @returns New words + words due for review
+ */
+export function getWordsToStudy(words: HebrewVocabWord[]): HebrewVocabWord[] {
+  const newWords = getNewWords(words);
+  const dueWords = getDueWords(words);
+  return [...newWords, ...dueWords];
 }
 
 /**

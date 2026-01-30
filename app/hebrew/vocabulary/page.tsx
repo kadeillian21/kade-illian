@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress, SetType } from './data/types';
-import { getDueWords, getNewWords, calculateNextReview } from './utils/srs-algorithm';
+import { getDueWords, getNewWords, getWordsToStudy, calculateNextReview } from './utils/srs-algorithm';
 import { suggestStudyDays } from './utils/organizer-v2';
 import ProgressDashboard from './components/ProgressDashboard';
 import LevelUpModal from './components/LevelUpModal';
@@ -129,6 +129,16 @@ export default function VocabularyPage() {
     return getDueWords(allWords);
   };
 
+  // Get all words to study (new + due) across all sets
+  const getAllWordsToStudy = () => {
+    if (!vocabSets || vocabSets.length === 0) return [];
+
+    const allWords = vocabSets.flatMap(set =>
+      (set.groups || []).flatMap(group => group.words || [])
+    );
+    return getWordsToStudy(allWords);
+  };
+
   // Get all words across all sets
   const getAllWords = () => {
     if (!vocabSets || vocabSets.length === 0) return [];
@@ -175,6 +185,17 @@ export default function VocabularyPage() {
       (set.groups || []).flatMap(group => group.words || [])
     );
     return getDueWords(activeWords);
+  };
+
+  // Get all words to study from active sets (new + due)
+  const getWordsToStudyFromActiveSets = () => {
+    const activeSets = getActiveSets();
+    if (activeSets.length === 0) return getAllWordsToStudy();
+
+    const activeWords = activeSets.flatMap(set =>
+      (set.groups || []).flatMap(group => group.words || [])
+    );
+    return getWordsToStudy(activeWords);
   };
 
   const viewSetDetail = async (set: VocabSet) => {
@@ -310,8 +331,8 @@ export default function VocabularyPage() {
   };
 
   const startReviewMode = () => {
-    const dueWords = getDueWordsFromActiveSets();
-    setCards(dueWords);
+    const wordsToStudy = getWordsToStudyFromActiveSets();
+    setCards(wordsToStudy);
     setCurrentIndex(0);
     setIsFlipped(false);
     setFlashcardMode('hebrew-to-english');
@@ -679,7 +700,10 @@ export default function VocabularyPage() {
   }, [currentIndex, cards.length, viewMode]);
 
   const currentCard = cards[currentIndex];
-  const totalDueWords = getDueWordsFromActiveSets().length;
+  const wordsToStudy = getWordsToStudyFromActiveSets();
+  const totalWordsToStudy = wordsToStudy.length;
+  const newWordsCount = wordsToStudy.filter(w => !w.level || w.level === 0).length;
+  const dueWordsCount = wordsToStudy.filter(w => w.level && w.level > 0).length;
   const activeSetsCount = getActiveSets().length;
 
   // Gamification UI (rendered above everything)
@@ -778,14 +802,29 @@ export default function VocabularyPage() {
             </div>
           )}
 
-          {/* Review Due Card */}
-          {totalDueWords > 0 && (
+          {/* Words to Study Card */}
+          {totalWordsToStudy > 0 && (
             <div className="mb-8 bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-300 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-bold text-orange-900 mb-1">Review Due</h3>
+                  <h3 className="text-2xl font-bold text-orange-900 mb-1">Ready to Study</h3>
                   <p className="text-orange-700">
-                    You have {totalDueWords} word{totalDueWords !== 1 ? 's' : ''} ready for review
+                    {newWordsCount > 0 && dueWordsCount > 0 && (
+                      <>
+                        You have {newWordsCount} new word{newWordsCount !== 1 ? 's' : ''} and{' '}
+                        {dueWordsCount} word{dueWordsCount !== 1 ? 's' : ''} due for review
+                      </>
+                    )}
+                    {newWordsCount > 0 && dueWordsCount === 0 && (
+                      <>
+                        You have {newWordsCount} new word{newWordsCount !== 1 ? 's' : ''} to learn
+                      </>
+                    )}
+                    {newWordsCount === 0 && dueWordsCount > 0 && (
+                      <>
+                        You have {dueWordsCount} word{dueWordsCount !== 1 ? 's' : ''} due for review
+                      </>
+                    )}
                     {activeSetsCount > 0 && (
                       <span className="text-orange-600">
                         {' '}from {activeSetsCount} active set{activeSetsCount !== 1 ? 's' : ''}
@@ -794,7 +833,7 @@ export default function VocabularyPage() {
                   </p>
                   {activeSetsCount === 0 && (
                     <p className="text-orange-600 text-sm mt-1">
-                      💡 Tip: Mark sets as "Active" to focus your reviews
+                      💡 Tip: Mark sets as "Active" to focus your study sessions
                     </p>
                   )}
                 </div>
@@ -802,7 +841,7 @@ export default function VocabularyPage() {
                   onClick={startReviewMode}
                   className="px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                 >
-                  Start Review
+                  Start Studying
                 </button>
               </div>
             </div>
