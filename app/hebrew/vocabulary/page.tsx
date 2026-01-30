@@ -270,6 +270,32 @@ export default function VocabularyPage() {
     setViewMode('flashcards');
   };
 
+  const studyNewWords = (mode: FlashcardMode) => {
+    if (!selectedSet) return;
+    setSelectedGroup(null);
+    setFlashcardMode(mode);
+    // Get only new words (level 0 or undefined)
+    const allWords = selectedSet.groups.flatMap(g => g.words);
+    const newWords = getNewWords(allWords);
+    setCards(newWords);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setViewMode('flashcards');
+  };
+
+  const studyDueWords = (mode: FlashcardMode) => {
+    if (!selectedSet) return;
+    setSelectedGroup(null);
+    setFlashcardMode(mode);
+    // Get only due words
+    const allWords = selectedSet.groups.flatMap(g => g.words);
+    const dueWords = getDueWords(allWords);
+    setCards(dueWords);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setViewMode('flashcards');
+  };
+
   const startReviewMode = () => {
     const dueWords = getDueWordsFromActiveSets();
     setCards(dueWords);
@@ -889,6 +915,57 @@ export default function VocabularyPage() {
             </h1>
             <p className="text-lg text-gray-600">{selectedSet.description}</p>
           </div>
+
+          {/* Quick Study Options - New & Due Words */}
+          {(() => {
+            const allWords = selectedSet.groups.flatMap(g => g.words);
+            const newWords = getNewWords(allWords);
+            const dueWords = getDueWords(allWords);
+
+            return (newWords.length > 0 || dueWords.length > 0) && (
+              <div className="mb-8 space-y-4">
+                {/* Study New Words */}
+                {newWords.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 shadow-lg border-2 border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-blue-900 mb-1">Learn New Words</h3>
+                        <p className="text-blue-700">
+                          {newWords.length} word{newWords.length !== 1 ? 's' : ''} you haven't learned yet
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => studyNewWords('hebrew-to-english')}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        Start Learning
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Review Due Words */}
+                {dueWords.length > 0 && (
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 shadow-lg border-2 border-orange-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-orange-900 mb-1">Review Due</h3>
+                        <p className="text-orange-700">
+                          {dueWords.length} word{dueWords.length !== 1 ? 's' : ''} ready for review from this set
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => studyDueWords('hebrew-to-english')}
+                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-yellow-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        Start Review
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Vocab Groups */}
           <div className="space-y-4 mb-8">
