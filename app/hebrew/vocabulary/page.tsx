@@ -373,112 +373,27 @@ export default function VocabularyPage() {
     // Increment cards studied counter
     setCardsStudiedThisSession(prev => prev + 1);
 
-    // Update database via API
-    try {
-      const response = await fetch('/api/vocab/progress/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wordId: updatedWord.id,
-          correct: true,
+    // OPTIMISTIC UPDATE: Update UI state immediately
+    const updatedCards = [...cards];
+    updatedCards[currentIndex] = updatedWord;
+    setCards(updatedCards);
+
+    // Update progress state optimistically
+    setProgress((prev: any) => ({
+      ...prev,
+      wordProgress: {
+        ...prev.wordProgress,
+        [updatedWord.id]: {
           level: updatedWord.level,
           nextReview: updatedWord.nextReview,
           lastReviewed: updatedWord.lastReviewed,
           reviewCount: updatedWord.reviewCount,
           correctCount: updatedWord.correctCount,
-        }),
-      });
+        },
+      },
+    }));
 
-      if (response.ok) {
-        const data = await response.json();
-
-        // Update progress state with new stats
-        setProgress((prev: any) => ({
-          ...prev,
-          stats: data.stats,
-          wordProgress: {
-            ...prev.wordProgress,
-            [updatedWord.id]: {
-              level: updatedWord.level,
-              nextReview: updatedWord.nextReview,
-              lastReviewed: updatedWord.lastReviewed,
-              reviewCount: updatedWord.reviewCount,
-              correctCount: updatedWord.correctCount,
-            },
-          },
-        }));
-
-        // 🎉 Award XP for correct answer!
-        try {
-          const xpResponse = await fetch('/api/vocab/xp/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              xpAmount: 10, // 10 XP per correct card
-              reason: 'correct_answer',
-            }),
-          });
-
-          if (xpResponse.ok) {
-            const xpData = await xpResponse.json();
-
-            // Check for level up!
-            if (xpData.leveledUp) {
-              setNewLevel(xpData.newLevel);
-              setShowLevelUp(true);
-            }
-
-            // Check for new achievements!
-            if (xpData.unlockedAchievements && xpData.unlockedAchievements.length > 0) {
-              setAchievements(prev => [...prev, ...xpData.unlockedAchievements]);
-            }
-
-            // Update stats with new XP/level
-            setProgress((prev: any) => ({
-              ...prev,
-              stats: {
-                ...prev.stats,
-                xp: xpData.totalXP,
-                level: xpData.level,
-              },
-            }));
-          }
-        } catch (xpError) {
-          console.error('Error awarding XP:', xpError);
-        }
-
-        // Update daily goal progress
-        try {
-          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cardsStudied: 1 }),
-          });
-
-          if (goalResponse.ok) {
-            const goalData = await goalResponse.json();
-            setProgress((prev: any) => ({
-              ...prev,
-              stats: {
-                ...prev.stats,
-                cardsToday: goalData.cardsToday,
-              },
-            }));
-          }
-        } catch (goalError) {
-          console.error('Error updating daily goal:', goalError);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating progress:', error);
-    }
-
-    // Update current card in state
-    const updatedCards = [...cards];
-    updatedCards[currentIndex] = updatedWord;
-    setCards(updatedCards);
-
-    // Auto-advance to next card
+    // Auto-advance to next card IMMEDIATELY (don't wait for API)
     setTimeout(() => {
       if (currentIndex < cards.length - 1) {
         nextCard();
@@ -489,6 +404,100 @@ export default function VocabularyPage() {
         setIsFlipped(false);
       }
     }, 500);
+
+    // Make API calls in the background (non-blocking)
+    // These happen AFTER the UI has already updated
+    (async () => {
+      try {
+        const response = await fetch('/api/vocab/progress/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wordId: updatedWord.id,
+            correct: true,
+            level: updatedWord.level,
+            nextReview: updatedWord.nextReview,
+            lastReviewed: updatedWord.lastReviewed,
+            reviewCount: updatedWord.reviewCount,
+            correctCount: updatedWord.correctCount,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update stats with DB response
+          setProgress((prev: any) => ({
+            ...prev,
+            stats: data.stats,
+          }));
+
+          // 🎉 Award XP for correct answer!
+          try {
+            const xpResponse = await fetch('/api/vocab/xp/add', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                xpAmount: 10, // 10 XP per correct card
+                reason: 'correct_answer',
+              }),
+            });
+
+            if (xpResponse.ok) {
+              const xpData = await xpResponse.json();
+
+              // Check for level up!
+              if (xpData.leveledUp) {
+                setNewLevel(xpData.newLevel);
+                setShowLevelUp(true);
+              }
+
+              // Check for new achievements!
+              if (xpData.unlockedAchievements && xpData.unlockedAchievements.length > 0) {
+                setAchievements(prev => [...prev, ...xpData.unlockedAchievements]);
+              }
+
+              // Update stats with new XP/level
+              setProgress((prev: any) => ({
+                ...prev,
+                stats: {
+                  ...prev.stats,
+                  xp: xpData.totalXP,
+                  level: xpData.level,
+                },
+              }));
+            }
+          } catch (xpError) {
+            console.error('Error awarding XP:', xpError);
+          }
+
+          // Update daily goal progress
+          try {
+            const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ cardsStudied: 1 }),
+            });
+
+            if (goalResponse.ok) {
+              const goalData = await goalResponse.json();
+              setProgress((prev: any) => ({
+                ...prev,
+                stats: {
+                  ...prev.stats,
+                  cardsToday: goalData.cardsToday,
+                },
+              }));
+            }
+          } catch (goalError) {
+            console.error('Error updating daily goal:', goalError);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating progress:', error);
+        // Could add a toast notification here for failed updates
+      }
+    })();
   };
 
   const handleIncorrect = async () => {
@@ -504,73 +513,27 @@ export default function VocabularyPage() {
     // Increment cards studied counter
     setCardsStudiedThisSession(prev => prev + 1);
 
-    // Update database via API
-    try {
-      const response = await fetch('/api/vocab/progress/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wordId: updatedWord.id,
-          correct: false,
+    // OPTIMISTIC UPDATE: Update UI state immediately
+    const updatedCards = [...cards];
+    updatedCards[currentIndex] = updatedWord;
+    setCards(updatedCards);
+
+    // Update progress state optimistically
+    setProgress((prev: any) => ({
+      ...prev,
+      wordProgress: {
+        ...prev.wordProgress,
+        [updatedWord.id]: {
           level: updatedWord.level,
           nextReview: updatedWord.nextReview,
           lastReviewed: updatedWord.lastReviewed,
           reviewCount: updatedWord.reviewCount,
           correctCount: updatedWord.correctCount,
-        }),
-      });
+        },
+      },
+    }));
 
-      if (response.ok) {
-        const data = await response.json();
-
-        // Update progress state with new stats
-        setProgress((prev: any) => ({
-          ...prev,
-          stats: data.stats,
-          wordProgress: {
-            ...prev.wordProgress,
-            [updatedWord.id]: {
-              level: updatedWord.level,
-              nextReview: updatedWord.nextReview,
-              lastReviewed: updatedWord.lastReviewed,
-              reviewCount: updatedWord.reviewCount,
-              correctCount: updatedWord.correctCount,
-            },
-          },
-        }));
-
-        // Update daily goal progress (even for incorrect - you still studied!)
-        try {
-          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cardsStudied: 1 }),
-          });
-
-          if (goalResponse.ok) {
-            const goalData = await goalResponse.json();
-            setProgress((prev: any) => ({
-              ...prev,
-              stats: {
-                ...prev.stats,
-                cardsToday: goalData.cardsToday,
-              },
-            }));
-          }
-        } catch (goalError) {
-          console.error('Error updating daily goal:', goalError);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating progress:', error);
-    }
-
-    // Update current card in state
-    const updatedCards = [...cards];
-    updatedCards[currentIndex] = updatedWord;
-    setCards(updatedCards);
-
-    // Auto-advance to next card
+    // Auto-advance to next card IMMEDIATELY (don't wait for API)
     setTimeout(() => {
       if (currentIndex < cards.length - 1) {
         nextCard();
@@ -581,6 +544,61 @@ export default function VocabularyPage() {
         setIsFlipped(false);
       }
     }, 500);
+
+    // Make API calls in the background (non-blocking)
+    // These happen AFTER the UI has already updated
+    (async () => {
+      try {
+        const response = await fetch('/api/vocab/progress/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wordId: updatedWord.id,
+            correct: false,
+            level: updatedWord.level,
+            nextReview: updatedWord.nextReview,
+            lastReviewed: updatedWord.lastReviewed,
+            reviewCount: updatedWord.reviewCount,
+            correctCount: updatedWord.correctCount,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Update stats with DB response
+          setProgress((prev: any) => ({
+            ...prev,
+            stats: data.stats,
+          }));
+
+          // Update daily goal progress (even for incorrect - you still studied!)
+          try {
+            const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ cardsStudied: 1 }),
+            });
+
+            if (goalResponse.ok) {
+              const goalData = await goalResponse.json();
+              setProgress((prev: any) => ({
+                ...prev,
+                stats: {
+                  ...prev.stats,
+                  cardsToday: goalData.cardsToday,
+                },
+              }));
+            }
+          } catch (goalError) {
+            console.error('Error updating daily goal:', goalError);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating progress:', error);
+        // Could add a toast notification here for failed updates
+      }
+    })();
   };
 
 
