@@ -296,6 +296,19 @@ export default function VocabularyPage() {
     setViewMode('flashcards');
   };
 
+  const studyWeakWords = (mode: FlashcardMode) => {
+    if (!selectedSet) return;
+    setSelectedGroup(null);
+    setFlashcardMode(mode);
+    // Get weak words (level 0-2) - words you're still learning/struggling with
+    const allWords = selectedSet.groups.flatMap(g => g.words);
+    const weakWords = allWords.filter(word => (word.level || 0) <= 2);
+    setCards(weakWords);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setViewMode('flashcards');
+  };
+
   const startReviewMode = () => {
     const dueWords = getDueWordsFromActiveSets();
     setCards(dueWords);
@@ -916,13 +929,14 @@ export default function VocabularyPage() {
             <p className="text-lg text-gray-600">{selectedSet.description}</p>
           </div>
 
-          {/* Quick Study Options - New & Due Words */}
+          {/* Quick Study Options - New, Due, & Weak Words */}
           {(() => {
             const allWords = selectedSet.groups.flatMap(g => g.words);
             const newWords = getNewWords(allWords);
             const dueWords = getDueWords(allWords);
+            const weakWords = allWords.filter(word => (word.level || 0) <= 2);
 
-            return (newWords.length > 0 || dueWords.length > 0) && (
+            return (newWords.length > 0 || dueWords.length > 0 || weakWords.length > 0) && (
               <div className="mb-8 space-y-4">
                 {/* Study New Words */}
                 {newWords.length > 0 && (
@@ -939,6 +953,26 @@ export default function VocabularyPage() {
                         className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                       >
                         Start Learning
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Practice Weak Words - Words you're struggling with */}
+                {weakWords.length > 0 && weakWords.length !== newWords.length && (
+                  <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-6 shadow-lg border-2 border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-red-900 mb-1">Practice Weak Words</h3>
+                        <p className="text-red-700">
+                          {weakWords.length} word{weakWords.length !== 1 ? 's' : ''} you're still learning (level 0-2)
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => studyWeakWords('hebrew-to-english')}
+                        className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        Practice Now
                       </button>
                     </div>
                   </div>
