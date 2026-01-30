@@ -37,6 +37,7 @@ export default function VocabularyPage() {
   const [newLevel, setNewLevel] = useState(1);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isNotLearnedOnlyMode, setIsNotLearnedOnlyMode] = useState(false);
 
   // Helper: Refresh progress data for words after update
   // Words now come from DB with progress already attached, but we need to
@@ -277,6 +278,7 @@ export default function VocabularyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
+    setIsNotLearnedOnlyMode(false);
   };
 
   const studyFullSet = (mode: FlashcardMode) => {
@@ -289,6 +291,7 @@ export default function VocabularyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
+    setIsNotLearnedOnlyMode(false);
   };
 
   const studyNewWords = (mode: FlashcardMode) => {
@@ -302,6 +305,7 @@ export default function VocabularyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
+    setIsNotLearnedOnlyMode(true); // This is also "not learned only" mode
   };
 
   const studyDueWords = (mode: FlashcardMode) => {
@@ -315,6 +319,7 @@ export default function VocabularyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
+    setIsNotLearnedOnlyMode(false);
   };
 
   const studyWeakWords = (mode: FlashcardMode) => {
@@ -328,6 +333,7 @@ export default function VocabularyPage() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setViewMode('flashcards');
+    setIsNotLearnedOnlyMode(false);
   };
 
   const startReviewMode = () => {
@@ -343,6 +349,7 @@ export default function VocabularyPage() {
     setIsFlipped(false);
     setFlashcardMode('hebrew-to-english');
     setViewMode('review');
+    setIsNotLearnedOnlyMode(true); // Flag that we're in "not learned only" mode
   };
 
   const returnToLibrary = async () => {
@@ -350,6 +357,7 @@ export default function VocabularyPage() {
     setSelectedSet(null);
     setSelectedGroup(null);
     setCards([]);
+    setIsNotLearnedOnlyMode(false);
 
     // Refresh data to get updated progress counts
     await loadData();
@@ -359,6 +367,7 @@ export default function VocabularyPage() {
     setViewMode('set-detail');
     setSelectedGroup(null);
     setCards([]);
+    setIsNotLearnedOnlyMode(false);
 
     // Refresh the selected set to get updated progress
     if (selectedSet) {
@@ -459,11 +468,6 @@ export default function VocabularyPage() {
     // Increment cards studied counter
     setCardsStudiedThisSession(prev => prev + 1);
 
-    // OPTIMISTIC UPDATE: Update UI state immediately
-    const updatedCards = [...cards];
-    updatedCards[currentIndex] = updatedWord;
-    setCards(updatedCards);
-
     // Update progress state optimistically
     setProgress((prev: any) => ({
       ...prev,
@@ -479,17 +483,45 @@ export default function VocabularyPage() {
       },
     }));
 
-    // Auto-advance to next card IMMEDIATELY (don't wait for API)
-    setTimeout(() => {
-      if (currentIndex < cards.length - 1) {
-        nextCard();
-      } else {
-        // 🎉 Last card - session complete! Trigger confetti!
-        setShowConfetti(true);
-        setTimeout(() => endSession(), 2000);
-        setIsFlipped(false);
-      }
-    }, 500);
+    // If reviewing "not learned" words only, remove this card since it's now learned
+    if (isNotLearnedOnlyMode) {
+      // Remove the now-learned card from the session
+      const updatedCards = cards.filter((_, idx) => idx !== currentIndex);
+      setCards(updatedCards);
+
+      // Auto-advance IMMEDIATELY
+      setTimeout(() => {
+        if (updatedCards.length === 0) {
+          // 🎉 All cards learned! Trigger confetti!
+          setShowConfetti(true);
+          setTimeout(() => endSession(), 2000);
+        } else if (currentIndex >= updatedCards.length) {
+          // Was on last card, stay on new last card
+          setCurrentIndex(updatedCards.length - 1);
+          setIsFlipped(false);
+        } else {
+          // Stay on same index (which now shows the next card)
+          setIsFlipped(false);
+        }
+      }, 500);
+    } else {
+      // Regular mode: just update the card in place
+      const updatedCards = [...cards];
+      updatedCards[currentIndex] = updatedWord;
+      setCards(updatedCards);
+
+      // Auto-advance to next card IMMEDIATELY (don't wait for API)
+      setTimeout(() => {
+        if (currentIndex < cards.length - 1) {
+          nextCard();
+        } else {
+          // 🎉 Last card - session complete! Trigger confetti!
+          setShowConfetti(true);
+          setTimeout(() => endSession(), 2000);
+          setIsFlipped(false);
+        }
+      }, 500);
+    }
 
     // Make API calls in the background (non-blocking)
     // These happen AFTER the UI has already updated
@@ -986,6 +1018,7 @@ export default function VocabularyPage() {
                         setIsFlipped(false);
                         setFlashcardMode('hebrew-to-english');
                         setViewMode('flashcards');
+                        setIsNotLearnedOnlyMode(true); // Flag that we're in "not learned only" mode
                       }}
                       className="px-6 py-3 bg-gradient-to-r from-orange-600 to-yellow-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
                     >
@@ -1062,14 +1095,14 @@ export default function VocabularyPage() {
   let subtitle = '';
 
   if (isReviewMode) {
-    title = 'Review Session';
-    subtitle = 'Words due for review';
+    title = isNotLearnedOnlyMode ? 'Learning New Words' : 'Review Session';
+    subtitle = isNotLearnedOnlyMode ? `${cards.length} word${cards.length !== 1 ? 's' : ''} to learn` : 'Words due for review';
   } else if (selectedGroup) {
     title = `${getCategoryEmoji(selectedGroup.category)} ${selectedGroup.category}`;
     subtitle = selectedGroup.subcategory || '';
   } else if (selectedSet) {
-    title = `${selectedSet.title} - Full Review`;
-    subtitle = `All ${cards.length} words`;
+    title = isNotLearnedOnlyMode ? `${selectedSet.title} - Not Learned` : `${selectedSet.title} - Full Review`;
+    subtitle = isNotLearnedOnlyMode ? `${cards.length} word${cards.length !== 1 ? 's' : ''} to learn` : `All ${cards.length} words`;
   }
 
   return (
