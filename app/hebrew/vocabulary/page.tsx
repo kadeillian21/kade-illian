@@ -58,45 +58,45 @@ export default function VocabularyPage() {
   };
 
   // Load vocab sets and progress from database
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Fetch vocab sets
-        const setsResponse = await fetch('/api/vocab/sets');
-        if (!setsResponse.ok) {
-          throw new Error('Failed to fetch vocab sets');
-        }
-        const sets = await setsResponse.json();
-
-        // Validate response is an array
-        if (!Array.isArray(sets)) {
-          console.error('Invalid vocab sets response:', sets);
-          setVocabSets([]);
-        } else {
-          setVocabSets(sets);
-
-          // Set active set (first active one, or first set)
-          const activeSet = sets.find((s: any) => s.isActive) || sets[0];
-          if (activeSet) {
-            setActiveSetIdState(activeSet.id);
-          }
-        }
-
-        // Fetch progress
-        const progressResponse = await fetch('/api/vocab/progress');
-        if (!progressResponse.ok) {
-          throw new Error('Failed to fetch progress');
-        }
-        const progressData = await progressResponse.json();
-        setProgress(progressData);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setVocabSets([]);
-      } finally {
-        setIsLoading(false);
+  const loadData = async () => {
+    try {
+      // Fetch vocab sets
+      const setsResponse = await fetch('/api/vocab/sets');
+      if (!setsResponse.ok) {
+        throw new Error('Failed to fetch vocab sets');
       }
-    };
+      const sets = await setsResponse.json();
 
+      // Validate response is an array
+      if (!Array.isArray(sets)) {
+        console.error('Invalid vocab sets response:', sets);
+        setVocabSets([]);
+      } else {
+        setVocabSets(sets);
+
+        // Set active set (first active one, or first set)
+        const activeSet = sets.find((s: any) => s.isActive) || sets[0];
+        if (activeSet) {
+          setActiveSetIdState(activeSet.id);
+        }
+      }
+
+      // Fetch progress
+      const progressResponse = await fetch('/api/vocab/progress');
+      if (!progressResponse.ok) {
+        throw new Error('Failed to fetch progress');
+      }
+      const progressData = await progressResponse.json();
+      setProgress(progressData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setVocabSets([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -279,17 +279,37 @@ export default function VocabularyPage() {
     setViewMode('review');
   };
 
-  const returnToLibrary = () => {
+  const returnToLibrary = async () => {
     setViewMode('library');
     setSelectedSet(null);
     setSelectedGroup(null);
     setCards([]);
+
+    // Refresh data to get updated progress counts
+    await loadData();
   };
 
-  const returnToSetDetail = () => {
+  const returnToSetDetail = async () => {
     setViewMode('set-detail');
     setSelectedGroup(null);
     setCards([]);
+
+    // Refresh the selected set to get updated progress
+    if (selectedSet) {
+      try {
+        const response = await fetch(`/api/vocab/sets/${selectedSet.id}`);
+        const fullSet = await response.json();
+        setSelectedSet(fullSet);
+      } catch (error) {
+        console.error('Error refreshing set:', error);
+      }
+    }
+  };
+
+  const goToDashboard = async () => {
+    setViewMode('dashboard');
+    // Refresh data to get updated progress
+    await loadData();
   };
 
   const getCategoryEmoji = (category: string): string => {
@@ -695,7 +715,7 @@ export default function VocabularyPage() {
             {/* Navigation to Dashboard and Bulk Management */}
             <div className="mt-4 flex flex-wrap gap-3 justify-center">
               <button
-                onClick={() => setViewMode('dashboard')}
+                onClick={goToDashboard}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
               >
                 <span>📊</span>
