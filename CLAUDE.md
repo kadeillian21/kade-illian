@@ -4,7 +4,12 @@ This document provides instructions for both the user (Kade) and Claude on how t
 
 ## System Overview
 
-The Hebrew vocabulary system is designed to help you learn Biblical Hebrew in a cognitively optimal way. When your Claude Hebrew Teacher gives you vocabulary words (30, 50, or any number), Claude Code will organize them into logical, learnable groups.
+The Biblical Hebrew learning system consists of two integrated parts:
+
+1. **Lesson Plans** (`/hebrew/lessons`) - Structured weekly curriculum with teaching content
+2. **Vocabulary System** (`/hebrew/vocabulary`) - Flashcard-based vocabulary learning with spaced repetition
+
+When your Claude Hebrew Teacher gives you vocabulary words (30, 50, or any number), Claude Code will organize them into logical, learnable groups and optionally link them to specific lessons.
 
 ### The New Architecture (Fixed!)
 
@@ -69,10 +74,59 @@ The new design uses a **Vocab Set Library** with **Progressive Disclosure**.
    - Real-time progress tracking
    - No localStorage syncing required
 
+### Lesson Plans System
+
+**New Addition:** The app now includes a structured lesson plan curriculum!
+
+**How It Works:**
+
+1. **Lesson Library** (`/hebrew/lessons`)
+   - Shows all weeks in a beautiful card grid
+   - Organized by month (Foundation, Nouns & Reading, etc.)
+   - Each lesson card shows: Week number, Title, Description, Topics, Status
+   - Progress tracking: Not Started → In Progress → Completed
+
+2. **Individual Lesson Page** (`/hebrew/lessons/[lessonId]`)
+   - Full lesson content with teaching material (in Markdown)
+   - Linked vocabulary sets for practice
+   - **Grammar Practice Sets**: Lessons can include small grammar flashcard sets (e.g., "Definite Article Practice", "Preposition Forms")
+     - These sets have `set_type: 'lesson'` to keep them separate from main vocabulary
+     - They are VISIBLE in the lesson detail page under "Practice Materials"
+     - Users can study them directly from the lesson
+     - Perfect for teaching specific grammar patterns (4-8 cards each)
+   - Mark lesson as complete button
+   - Progress tracking (started date, completed date)
+
+3. **Admin Interface** (`/hebrew/lessons/admin`)
+   - Create new lessons via web form
+   - Add lesson content in Markdown
+   - Link vocabulary sets to lessons
+   - Supports both Hebrew and Greek (future)
+
+**Database Structure:**
+- `languages` table - Language metadata (Hebrew, Greek)
+- `lessons` table - All lesson content and metadata
+- `user_lesson_progress` table - User completion tracking
+- `vocab_sets` table - Now has `language_id` column
+
+**Key Features:**
+- Language-agnostic design (ready for Koine Greek!)
+- Rich Markdown content for teaching
+- Links to vocabulary sets
+- Progress tracking per lesson
+- Month/week organization
+
 ## File Structure
 
 ```
-app/hebrew/vocabulary/
+app/hebrew/
+├── lessons/
+│   ├── page.tsx                        # Lesson library (grid view)
+│   ├── [lessonId]/
+│   │   └── page.tsx                    # Individual lesson detail
+│   └── admin/
+│       └── page.tsx                    # Admin interface for lessons
+└── vocabulary/
 ├── page.tsx                            # Main flashcard interface
 ├── admin/
 │   └── page.tsx                        # Admin interface for adding vocab
@@ -86,20 +140,124 @@ app/hebrew/vocabulary/
     ├── srs-algorithm.ts                # Spaced repetition system
     └── stats.ts                        # Statistics calculations
 
-app/api/vocab/
-├── create/route.ts                     # Create new vocab set
-├── sets/route.ts                       # List all vocab sets
-├── sets/[setId]/
-│   ├── route.ts                        # Get specific vocab set
-│   └── activate/route.ts               # Set active vocab set
-└── progress/
-    ├── route.ts                        # Get user progress
-    └── update/route.ts                 # Update word progress
+app/api/
+├── lessons/
+│   ├── route.ts                        # GET all lessons (filter by language)
+│   ├── create/route.ts                 # POST create new lesson
+│   └── [lessonId]/
+│       ├── route.ts                    # GET specific lesson
+│       └── progress/route.ts           # GET/POST lesson progress
+└── vocab/
+    ├── create/route.ts                 # Create new vocab set
+    ├── sets/route.ts                   # List all vocab sets
+    ├── sets/[setId]/
+    │   ├── route.ts                    # Get specific vocab set
+    │   └── activate/route.ts           # Set active vocab set
+    └── progress/
+        ├── route.ts                    # Get user progress
+        └── update/route.ts             # Update word progress
 
 scripts/
 ├── 01-create-schema.ts                 # Database schema setup
 ├── 02-migrate-vocab.ts                 # Migrate vocab to database
 └── 03-migrate-progress.ts              # Migrate progress to database
+```
+
+## How to Add New Lessons
+
+### For Kade (The User)
+
+When you want to add a new weekly lesson:
+
+**Option 1: Use Admin Interface (Recommended)**
+1. Visit `/hebrew/lessons/admin`
+2. Fill in the form:
+   - Lesson ID (e.g., `hebrew-week-7-reading`)
+   - Week/month numbers and order index
+   - Title and description
+   - Topics (comma-separated)
+   - Vocabulary set IDs to link (comma-separated)
+   - Full lesson content in Markdown
+3. Click "Create Lesson"
+4. The lesson appears in the library immediately
+
+**Option 2: Ask Claude Code**
+Provide Claude with:
+```
+I need a new lesson for Week 7:
+- Title: Extended Reading Practice
+- Focus on: Reading Genesis 1 fluently
+- Should link to: genesis-1-1-5, genesis-1-6-10
+- Content: [describe what to teach]
+```
+
+Claude Code will create the lesson via API and seed it to the database.
+
+### For Claude Code (The Assistant)
+
+When the user requests a new lesson, follow this workflow:
+
+#### Step 1: Gather Lesson Details
+
+- **id**: Unique identifier (e.g., `hebrew-week-7-reading`)
+- **language_id**: `hebrew` or `greek`
+- **week_number**: Week in the curriculum (1, 2, 3, etc.)
+- **month_number**: Month grouping (1 = Foundation, 2 = Nouns & Reading, etc.)
+- **title**: Short, compelling title (e.g., "Extended Reading Practice")
+- **description**: 1-2 sentence summary for the card
+- **lesson_content**: Full teaching content in Markdown format
+- **topics**: Array of topic tags (e.g., ["Genesis 1 Complete", "Reading Fluency"])
+- **vocabulary_set_ids**: Array of vocab set IDs to link (e.g., ["genesis-1-1-5"])
+- **order_index**: Display order (1, 2, 3, etc.)
+
+#### Step 2: Write Lesson Content in Markdown
+
+Structure the lesson with:
+- # Main heading (lesson title)
+- ## Overview section
+- ## Learning Objectives (bullet points)
+- ## Teaching sections (with examples)
+- ## Practice Schedule (suggested daily breakdown)
+- ## Next Steps (what comes after)
+
+Use proper Markdown formatting:
+- `#` for headings
+- `**bold**` for emphasis
+- `-` for bullet points
+- Hebrew text with nikkud preserved
+
+#### Step 3: Call the API
+
+```typescript
+await fetch('/api/lessons/create', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    id: 'hebrew-week-7-reading',
+    language_id: 'hebrew',
+    week_number: 7,
+    month_number: 2,
+    title: 'Extended Reading Practice',
+    description: 'Consolidate all Month 2 learning...',
+    lesson_content: '# Week 7: Extended Reading Practice...',
+    topics: ['Genesis 1 Complete', 'Reading Fluency'],
+    vocabulary_set_ids: ['genesis-1-1-5', 'genesis-1-6-10'],
+    order_index: 7
+  })
+});
+```
+
+#### Step 4: Confirm Success
+
+Show the user:
+```
+✅ Successfully created "Week 7: Extended Reading Practice"!
+
+The lesson is now live at /hebrew/lessons/hebrew-week-7-reading
+
+Linked vocabulary sets:
+- Genesis 1:1-5
+- Genesis 1:6-10
 ```
 
 ## How to Add New Vocabulary
@@ -148,6 +306,11 @@ Extract each word's:
 For each word, add:
 - `semanticGroup`: Use semantic field detection
 - `frequency`: If known (optional - helps with ordering)
+- **`pronunciation`**: REQUIRED for all vocabulary - Pronunciation guide with stress marks (e.g., "bah-RAH" for בָּרָא)
+  - Use capitalization to indicate stressed syllables
+  - Include for regular vocabulary AND grammar cards
+  - Store in `extraData.pronunciation` for grammar card types
+  - This helps users learn proper Hebrew pronunciation
 
 #### Step 3: Format as JSON Array
 

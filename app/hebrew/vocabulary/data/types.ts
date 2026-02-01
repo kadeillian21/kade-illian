@@ -146,3 +146,98 @@ export const SEMANTIC_GROUPS = {
   QUALITY: 'Quality & Description',
   LOGICAL: 'Logical Relations'
 } as const;
+
+// Interactive Lesson Step Types
+
+export type StepType = 'objective' | 'concept' | 'scripture' | 'vocabulary' | 'quiz' | 'completion';
+
+export interface ObjectiveStepContent {
+  title: string;
+  objectives: string[];
+  estimatedMinutes: number;
+  verseReference?: string;
+}
+
+export interface ConceptStepContent {
+  conceptName: string;
+  summary: string;
+  visualAid?: {
+    type: 'table' | 'diagram' | 'chart';
+    data: any;
+  };
+  examples: {
+    hebrew?: string;
+    translation?: string;
+    highlight?: string;
+    explanation: string;
+  }[];
+  expandableTheory?: {
+    title: string;
+    content: string; // Markdown
+  };
+}
+
+export interface ScriptureStepContent {
+  reference: string;
+  hebrewText: string;
+  englishTranslation: string;
+  highlights?: {
+    wordIndex: number;
+    color: string;
+    concept: string;
+  }[];
+  comprehensionPrompt?: string;
+  audioUrl?: string;
+}
+
+export interface VocabularyStepContent {
+  vocabularySetId: string;
+  wordIds: string[];
+  contextVerse?: string;
+  instructions: string;
+}
+
+export interface CompletionStepContent {
+  celebrationMessage: string;
+  xpAwarded: number;
+  achievements?: string[];
+  nextLessonId?: string;
+  reviewPrompt?: string;
+  referenceLinks?: {
+    title: string;
+    url: string;
+  }[];
+}
+
+export type StepContent =
+  | ObjectiveStepContent
+  | ConceptStepContent
+  | ScriptureStepContent
+  | VocabularyStepContent
+  | CompletionStepContent;
+
+export interface LessonStep {
+  id: string;
+  lessonId: string;
+  stepNumber: number;
+  stepType: StepType;
+  content: StepContent;
+  orderIndex: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  lessonId: string;
+  questionText: string;
+  questionType: 'multiple_choice' | 'fill_blank' | 'translation';
+  correctAnswer: string;
+  options?: string[];
+  explanation?: string;
+  orderIndex: number;
+}
+
+export interface QuizAttempt {
+  questionId: string;
+  selectedAnswer: string;
+  isCorrect: boolean;
+}

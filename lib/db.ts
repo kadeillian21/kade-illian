@@ -12,7 +12,7 @@ export function getDb() {
     const connectionString = process.env.POSTGRES_URL!;
 
     sql = postgres(connectionString, {
-      max: 1, // Limit connection pool size for serverless
+      max: 10, // Increased pool size for better concurrency
       idle_timeout: 20,
       connect_timeout: 10,
       ssl: {

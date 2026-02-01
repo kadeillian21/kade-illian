@@ -820,6 +820,13 @@ export default function VocabularyPage() {
 
             {/* Navigation to Dashboard and Bulk Management */}
             <div className="mt-4 flex flex-wrap gap-3 justify-center">
+              <Link
+                href="/hebrew/lessons"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                <span>📖</span>
+                <span>Lesson Plans</span>
+              </Link>
               <button
                 onClick={goToDashboard}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
@@ -887,7 +894,9 @@ export default function VocabularyPage() {
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {vocabSets.map((set) => {
+                {vocabSets
+                  .filter(set => (set as any).setType !== 'lesson') // Hide lesson-specific practice sets
+                  .map((set) => {
                   const stats = getSetStats(set);
                   const isActive = set.isActive;
 
