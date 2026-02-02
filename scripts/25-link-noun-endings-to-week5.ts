@@ -36,16 +36,22 @@ async function linkNounEndingsToWeek5() {
 
     const step = steps[0];
     console.log(`✅ Found Step ${step.step_number}: ${step.content.conceptName}`);
+    console.log(`   Current practiceVocabSetId: ${step.content.practiceVocabSetId}`);
 
-    // Update the content to use noun-ending-patterns instead
+    // Parse the content if it's a string
+    let currentContent = typeof step.content === 'string' ? JSON.parse(step.content) : step.content;
+
+    // Update only the practiceVocabSetId, preserving everything else
     const updatedContent = {
-      ...step.content,
+      ...currentContent,
       practiceVocabSetId: 'noun-ending-patterns'
     };
 
+    console.log(`   Has examples: ${updatedContent.examples ? 'Yes (' + updatedContent.examples.length + ')' : 'No'}`);
+
     await sql`
       UPDATE lesson_steps
-      SET content = ${JSON.stringify(updatedContent)},
+      SET content = ${sql.json(updatedContent)},
           updated_at = NOW()
       WHERE id = ${step.id}
     `;
