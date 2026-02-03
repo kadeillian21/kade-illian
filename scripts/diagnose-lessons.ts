@@ -3,7 +3,12 @@
  * Run: npx tsx scripts/diagnose-lessons.ts
  */
 
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import postgres from 'postgres';
+
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
 
 async function diagnoseLessons() {
   const connectionString = process.env.POSTGRES_URL;
