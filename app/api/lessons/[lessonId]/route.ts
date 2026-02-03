@@ -48,11 +48,10 @@ export async function GET(
     // If lesson has vocabulary sets, fetch them
     let vocabSets = [];
     if (lesson.vocabulary_set_ids && lesson.vocabulary_set_ids.length > 0) {
-      const vocabResult = await sql`
+      vocabSets = await sql`
         SELECT * FROM vocab_sets
         WHERE id = ANY(${lesson.vocabulary_set_ids})
       `;
-      vocabSets = vocabResult.rows;
     }
 
     // Update last_accessed_at if user has progress
