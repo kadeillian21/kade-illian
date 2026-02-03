@@ -44,20 +44,30 @@ export default function LessonDetailPage() {
   const loadLesson = async () => {
     try {
       // First check if lesson has interactive steps
-      const stepsResponse = await fetch(`/api/lessons/${lessonId}/steps`);
-      if (stepsResponse.ok) {
-        const stepsData = await stepsResponse.json();
-        if (stepsData.steps && stepsData.steps.length > 0) {
-          // Lesson has interactive steps, redirect to interactive mode
-          router.push(`/hebrew/lessons/${lessonId}/interactive`);
-          return;
+      try {
+        const stepsResponse = await fetch(`/api/lessons/${lessonId}/steps`);
+        if (stepsResponse.ok) {
+          const stepsData = await stepsResponse.json();
+          if (stepsData.steps && stepsData.steps.length > 0) {
+            // Lesson has interactive steps, redirect to interactive mode
+            console.log('Redirecting to interactive lesson');
+            router.push(`/hebrew/lessons/${lessonId}/interactive`);
+            return;
+          }
+        } else {
+          console.log('Steps API returned non-OK status:', stepsResponse.status);
         }
+      } catch (stepsError) {
+        // If steps fetch fails, continue to traditional view
+        console.log('Failed to fetch steps, falling back to traditional view:', stepsError);
       }
 
       // Fallback to traditional lesson view
+      console.log('Loading traditional lesson view');
       const response = await fetch(`/api/lessons/${lessonId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch lesson');
+        console.error('Lesson API returned status:', response.status);
+        throw new Error(`Failed to fetch lesson: ${response.status}`);
       }
 
       const data = await response.json();
@@ -68,9 +78,13 @@ export default function LessonDetailPage() {
         if (data.lesson.user_status === 'not_started') {
           await updateLessonStatus('in_progress');
         }
+      } else {
+        throw new Error('Lesson data not successful');
       }
     } catch (error) {
       console.error('Error loading lesson:', error);
+      // Set lesson to null to trigger "not found" UI
+      setLesson(null);
     } finally {
       setIsLoading(false);
     }

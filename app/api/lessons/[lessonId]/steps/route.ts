@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import postgres from 'postgres';
+import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 
 // GET /api/lessons/[lessonId]/steps - Fetch all steps and quiz questions for a lesson
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
+  // Check authentication
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const { lessonId } = await params;
 
   if (!lessonId) {
@@ -15,16 +22,7 @@ export async function GET(
     );
   }
 
-  const connectionString = process.env.POSTGRES_URL;
-
-  if (!connectionString) {
-    return NextResponse.json(
-      { error: 'Database connection not configured' },
-      { status: 500 }
-    );
-  }
-
-  const sql = postgres(connectionString);
+  const sql = getDb();
 
   try {
     // Fetch lesson metadata
