@@ -167,7 +167,7 @@ export default function HebrewStatsNavbar() {
           // Save every 30 seconds
           if (newSeconds - lastSaveRef.current >= 30) {
             saveTime(30);
-            setDailyTotalSeconds((d) => d + 30);
+            // Don't increment dailyTotalSeconds here - it will be updated by the periodic fetch
             lastSaveRef.current = newSeconds;
           }
           return newSeconds;
@@ -188,13 +188,19 @@ export default function HebrewStatsNavbar() {
   }, [isRunning, saveTime]);
 
   // Save remaining time when stopping
-  const handleToggle = () => {
+  const handleToggle = async () => {
     if (isRunning) {
       // Stopping - save any unsaved time
       const unsaved = sessionSeconds - lastSaveRef.current;
       if (unsaved > 0) {
-        saveTime(unsaved);
-        setDailyTotalSeconds((d) => d + unsaved);
+        await saveTime(unsaved);
+        // Refetch the daily total immediately to show updated time
+        const tzOffset = new Date().getTimezoneOffset();
+        const res = await fetch(`/api/timer?tzOffset=${tzOffset}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDailyTotalSeconds(data.totalSeconds || 0);
+        }
       }
       lastSaveRef.current = 0;
       setSessionSeconds(0);
