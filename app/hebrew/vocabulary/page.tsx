@@ -14,6 +14,9 @@ import LevelUpModal from './components/LevelUpModal';
 import AchievementToast from './components/AchievementToast';
 import Confetti from './components/Confetti';
 import FlashcardRenderer from './components/FlashcardRenderer';
+import LibraryView from './components/LibraryView';
+import SetDetailView from './components/SetDetailView';
+import FlashcardStudyView from './components/FlashcardStudyView';
 
 type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
 type FlashcardMode = 'hebrew-to-english' | 'english-to-hebrew';
@@ -825,585 +828,68 @@ function VocabularyPageContent() {
   // VIEW: Library (Landing Page)
   if (viewMode === 'library') {
     return (
-      <>
-        {gamificationUI}
-        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-          <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link
-              href="/hebrew"
-              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Hebrew
-            </Link>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                Hebrew Vocabulary
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600">Your vocabulary sets and review schedule</p>
-
-            {/* Navigation to Dashboard and Bulk Management */}
-            <div className="mt-4 flex flex-wrap gap-3 justify-center">
-              <Link
-                href="/hebrew/lessons"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              >
-                <span>&#128214;</span>
-                <span>Lesson Plans</span>
-              </Link>
-              <button
-                onClick={goToDashboard}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              >
-                <span>📊</span>
-                <span>View Progress Dashboard</span>
-              </button>
-              <Link
-                href="/hebrew/vocabulary/manage"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              >
-                <span>✏️</span>
-                <span>Bulk Manage Words</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {isLoading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
-              <p className="mt-4 text-gray-600">Loading vocabulary sets...</p>
-            </div>
-          )}
-
-          {/* Not Learned Words Card */}
-          {totalNotLearned > 0 && (
-            <div className="mb-8 bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-300 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold text-orange-900 mb-1">Not Learned</h3>
-                  <p className="text-orange-700">
-                    You have {totalNotLearned} word{totalNotLearned !== 1 ? 's' : ''} you don't know yet
-                    {activeSetsCount > 0 && (
-                      <span className="text-orange-600">
-                        {' '}from {activeSetsCount} active set{activeSetsCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </p>
-                  {activeSetsCount === 0 && (
-                    <p className="text-orange-600 text-sm mt-1">
-                      💡 Tip: Mark sets as "Active" to focus your study sessions
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={startReviewMode}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                >
-                  Study Now
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Foundational Sets (Alphabet, Syllables) */}
-          {!isLoading && vocabSets.filter(set => (set as any).setType === 'foundational').length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl">🏛️</span>
-                <h2 className="text-2xl font-bold text-gray-800">Foundations</h2>
-              </div>
-              <p className="text-gray-600 mb-4">Master these fundamentals before diving into vocabulary</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {vocabSets
-                  .filter(set => (set as any).setType === 'foundational')
-                  .map((set) => {
-                  const stats = getSetStats(set);
-                  const isActive = set.isActive;
-
-                return (
-                  <div
-                    key={set.id}
-                    className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 transition-all duration-200 hover:shadow-xl ${
-                      isActive ? 'border-green-400 bg-gradient-to-br from-green-50 to-white' : 'border-[#4a5d49]/30'
-                    }`}
-                  >
-                    {/* Active Badge */}
-                    {isActive && (
-                      <div className="inline-block px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full mb-3">
-                        ✓ ACTIVE
-                      </div>
-                    )}
-
-                    {/* Set Info */}
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                      <span className="text-2xl">{getSetTypeIcon((set as any).setType)}</span>
-                      <span>{set.title}</span>
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">{set.description}</p>
-
-                    {/* Stats */}
-                    <div className="flex gap-4 mb-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Total:</span>
-                        <span className="font-bold text-gray-800">{stats.total}</span>
-                      </div>
-                      {stats.notLearned > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-orange-600">Not Learned:</span>
-                          <span className="font-bold text-orange-700">{stats.notLearned}</span>
-                        </div>
-                      )}
-                      {stats.learned > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-green-600">Learned:</span>
-                          <span className="font-bold text-green-700">{stats.learned}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 items-center">
-                      <button
-                        onClick={() => viewSetDetail(set)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                      >
-                        Study
-                      </button>
-                      <button
-                        onClick={() => toggleSetActive(set.id)}
-                        className={`px-4 py-2 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
-                          isActive
-                            ? 'bg-green-500 text-white border-green-600'
-                            : 'bg-white text-gray-700 border-gray-300'
-                        }`}
-                      >
-                        {isActive ? '✓ Active' : 'Set Active'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-          )}
-
-          {/* Vocab Sets */}
-          {!isLoading && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Vocabulary Sets</h2>
-                {activeSetsCount > 0 && (
-                  <div className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-semibold text-sm">
-                    {activeSetsCount} Active Set{activeSetsCount !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {vocabSets
-                  .filter(set => (set as any).setType !== 'lesson' && (set as any).setType !== 'foundational')
-                  .map((set) => {
-                  const stats = getSetStats(set);
-                  const isActive = set.isActive;
-
-                return (
-                  <div
-                    key={set.id}
-                    className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 transition-all duration-200 hover:shadow-xl ${
-                      isActive ? 'border-green-400 bg-gradient-to-br from-green-50 to-white' : 'border-white/50'
-                    }`}
-                  >
-                    {/* Active Badge */}
-                    {isActive && (
-                      <div className="inline-block px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full mb-3">
-                        ✓ ACTIVE
-                      </div>
-                    )}
-
-                    {/* Set Type Badge */}
-                    {(set as any).setType && (set as any).setType !== 'vocabulary' && (
-                      <div className="inline-block px-3 py-1 bg-[#4a5d49]/10 text-[#4a5d49] text-xs font-bold rounded-full mb-3 ml-2">
-                        {getSetTypeIcon((set as any).setType)} {getSetTypeLabel((set as any).setType)}
-                      </div>
-                    )}
-
-                    {/* Set Info */}
-                    <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                      <span className="text-2xl">{getSetTypeIcon((set as any).setType)}</span>
-                      <span>{set.title}</span>
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">{set.description}</p>
-
-                    {/* Stats */}
-                    <div className="flex gap-4 mb-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Total:</span>
-                        <span className="font-bold text-gray-800">{stats.total}</span>
-                      </div>
-                      {stats.notLearned > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-orange-600">Not Learned:</span>
-                          <span className="font-bold text-orange-700">{stats.notLearned}</span>
-                        </div>
-                      )}
-                      {stats.learned > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-green-600">Learned:</span>
-                          <span className="font-bold text-green-700">{stats.learned}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-3 items-center">
-                      <button
-                        onClick={() => viewSetDetail(set)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                      >
-                        Study
-                      </button>
-                      <button
-                        onClick={() => toggleSetActive(set.id)}
-                        className={`px-4 py-2 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
-                          isActive
-                            ? 'bg-green-500 text-white border-green-600'
-                            : 'bg-white text-gray-700 border-gray-300'
-                        }`}
-                      >
-                        {isActive ? '✓ Active' : 'Set Active'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-          )}
-          </div>
-        </div>
-      </>
+      <LibraryView
+        vocabSets={vocabSets}
+        isLoading={isLoading}
+        totalNotLearned={totalNotLearned}
+        activeSetsCount={activeSetsCount}
+        getSetStats={getSetStats}
+        getSetTypeIcon={getSetTypeIcon}
+        getSetTypeLabel={getSetTypeLabel}
+        onViewSetDetail={viewSetDetail}
+        onToggleSetActive={toggleSetActive}
+        onStartReviewMode={startReviewMode}
+        onGoToDashboard={goToDashboard}
+        gamificationUI={gamificationUI}
+      />
     );
   }
 
   // VIEW: Set Detail (Organized Groups)
   if (viewMode === 'set-detail' && selectedSet) {
+    const handleStudyNotLearned = (words: HebrewVocabWord[]) => {
+      setCards(words);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+      setFlashcardMode('hebrew-to-english');
+      setViewMode('flashcards');
+      setIsNotLearnedOnlyMode(true);
+    };
+
     return (
-      <>
-        {gamificationUI}
-        <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-4xl">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <button
-              onClick={returnToLibrary}
-              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Library
-            </button>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                {selectedSet.title}
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600">{selectedSet.description}</p>
-          </div>
-
-          {/* Quick Study Options - Not Learned Words */}
-          {(() => {
-            const allWords = selectedSet.groups.flatMap(g => g.words);
-            const notLearnedWords = allWords.filter(w => !w.level || w.level === 0);
-
-            return notLearnedWords.length > 0 && (
-              <div className="mb-8">
-                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 shadow-lg border-2 border-orange-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-orange-900 mb-1">Not Learned</h3>
-                      <p className="text-orange-700">
-                        {notLearnedWords.length} word{notLearnedWords.length !== 1 ? 's' : ''} you don't know yet
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setCards(notLearnedWords);
-                        setCurrentIndex(0);
-                        setIsFlipped(false);
-                        setFlashcardMode('hebrew-to-english');
-                        setViewMode('flashcards');
-                        setIsNotLearnedOnlyMode(true); // Flag that we're in "not learned only" mode
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-orange-600 to-yellow-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                    >
-                      Study Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Vocab Groups */}
-          <div className="space-y-4 mb-8">
-            {selectedSet.groups.map((group, groupIndex) => (
-              <div key={groupIndex} className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-                {/* Group Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                      <span>{getCategoryEmoji(group.category)}</span>
-                      <span>{group.category}</span>
-                    </h3>
-                    {group.subcategory && (
-                      <p className="text-sm text-gray-600 mt-1 ml-8">{group.subcategory}</p>
-                    )}
-                  </div>
-                  <div className="text-right mr-4">
-                    <div className="text-lg font-bold text-gray-800">{group.words.length} words</div>
-                    <div className="text-xs text-gray-500">~{suggestStudyDays(group)} day{suggestStudyDays(group) !== 1 ? 's' : ''}</div>
-                  </div>
-                  <button
-                    onClick={() => startStudying(group, 'hebrew-to-english')}
-                    className="px-5 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                  >
-                    Study This Group
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Review Entire Set Section */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 shadow-lg border-2 border-purple-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-3 text-center">Review All Together</h3>
-            <p className="text-sm text-gray-600 mb-4 text-center">
-              Study all {selectedSet.groups.reduce((sum, g) => sum + g.words.length, 0)} words from this set in one session
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => studyFullSet('hebrew-to-english')}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              >
-                Review: Hebrew → English
-              </button>
-              <button
-                onClick={() => studyFullSet('english-to-hebrew')}
-                className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 border-purple-300"
-              >
-                Review: English → Hebrew
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      </>
+      <SetDetailView
+        selectedSet={selectedSet}
+        onReturnToLibrary={returnToLibrary}
+        onStartStudying={startStudying}
+        onStudyFullSet={studyFullSet}
+        onStudyNotLearned={handleStudyNotLearned}
+        getCategoryEmoji={getCategoryEmoji}
+        gamificationUI={gamificationUI}
+      />
     );
   }
 
   // VIEW: Flashcards or Review Mode
-  const isReviewMode = viewMode === 'review';
-  const backAction = isReviewMode ? returnToLibrary : returnToSetDetail;
-
-  let title = 'Study Session';
-  let subtitle = '';
-
-  if (isReviewMode) {
-    title = isNotLearnedOnlyMode ? 'Learning New Words' : 'Review Session';
-    subtitle = isNotLearnedOnlyMode ? `${cards.length} word${cards.length !== 1 ? 's' : ''} to learn` : 'Words due for review';
-  } else if (selectedGroup) {
-    title = `${getCategoryEmoji(selectedGroup.category)} ${selectedGroup.category}`;
-    subtitle = selectedGroup.subcategory || '';
-  } else if (selectedSet) {
-    title = isNotLearnedOnlyMode ? `${selectedSet.title} - Not Learned` : `${selectedSet.title} - Full Review`;
-    subtitle = isNotLearnedOnlyMode ? `${cards.length} word${cards.length !== 1 ? 's' : ''} to learn` : `All ${cards.length} words`;
-  }
-
   return (
-    <>
-      {gamificationUI}
-      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
-        <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <button
-              onClick={backAction}
-              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              {isReviewMode ? 'Back to Library' : 'Back to Set'}
-            </button>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                {title}
-              </span>
-            </h1>
-            {subtitle && (
-              <p className="text-md text-gray-600">{subtitle}</p>
-            )}
-          </div>
-
-          {/* Progress Bar */}
-          {cards.length > 0 && (
-            <>
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 shadow-lg border border-white/50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-gray-700">Progress</span>
-                  <span className="text-sm font-semibold bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                    {currentIndex + 1} / {cards.length}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#6b7d6a] to-[#8a9a8a] rounded-full transition-all duration-300 shadow-md"
-                    style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Flashcard */}
-              {currentCard && (
-                <div className="mb-6">
-                  {/* Use FlashcardRenderer for special card types, or inline for vocab with direction */}
-                  {currentCard.cardType && currentCard.cardType !== 'vocabulary' ? (
-                    <FlashcardRenderer
-                      word={currentCard}
-                      isFlipped={isFlipped}
-                      onFlip={flipCard}
-                    />
-                  ) : (
-                    <div
-                      className={`bg-white rounded-3xl shadow-2xl border-2 transition-all duration-500 cursor-pointer hover:shadow-3xl min-h-[400px] flex items-center justify-center ${
-                        isFlipped ? 'border-[#d4c5b0] bg-gradient-to-br from-pink-50 to-purple-50' : 'border-[#d4c5b0]'
-                      }`}
-                      onClick={flipCard}
-                    >
-                      {!isFlipped ? (
-                        // Front of card
-                        <div className="p-12 text-center">
-                          {flashcardMode === 'hebrew-to-english' ? (
-                            <div
-                              className="text-7xl md:text-8xl font-bold font-[family-name:var(--font-hebrew)] text-[#4a5d49] mb-4 select-text cursor-text"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {currentCard.hebrew}
-                            </div>
-                          ) : (
-                            <div className="text-5xl md:text-6xl font-bold text-gray-900">
-                              {currentCard.english}
-                            </div>
-                          )}
-                          <div className="text-gray-400 italic text-lg mt-6">
-                            Click to reveal answer
-                          </div>
-                        </div>
-                      ) : (
-                        // Back of card
-                        <div className="p-12 text-center">
-                          <div
-                            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 select-text cursor-text"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {flashcardMode === 'hebrew-to-english' ? currentCard.english : (
-                              <span className="font-[family-name:var(--font-hebrew)]">{currentCard.hebrew}</span>
-                            )}
-                          </div>
-                          <div className="text-2xl text-gray-600 italic mb-4">
-                            ({currentCard.trans})
-                          </div>
-                          <div className="text-lg text-gray-700 font-medium mb-4">
-                            {currentCard.type}
-                          </div>
-                          <div className="text-base text-gray-600 leading-relaxed">
-                            {currentCard.notes}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* SRS Buttons (shown when card is flipped) */}
-              {isFlipped && currentCard && (
-                <div className="mb-6">
-                  <p className="text-center text-lg font-semibold text-gray-700 mb-3">
-                    Did you get it right?
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <button
-                      onClick={handleIncorrect}
-                      className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
-                    >
-                      <span className="text-2xl">❌</span>
-                      <span>Need Practice</span>
-                    </button>
-                    <button
-                      onClick={handleCorrect}
-                      className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
-                    >
-                      <span className="text-2xl">✓</span>
-                      <span>Got It!</span>
-                    </button>
-                  </div>
-                  <p className="text-center text-sm text-gray-500 mt-3">
-                    This helps track your progress and schedule reviews
-                  </p>
-                </div>
-              )}
-
-              {/* Hint */}
-              <div className="text-center text-sm text-gray-600 mb-6">
-                {isFlipped ? 'Mark your answer above' : 'Click card to flip - Arrow keys to navigate - Space to flip'}
-              </div>
-
-              {/* Controls */}
-              <div className="flex flex-wrap gap-4 justify-center">
-                <button
-                  onClick={previousCard}
-                  className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={shuffle}
-                  className="px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                >
-                  Shuffle
-                </button>
-                <button
-                  onClick={nextCard}
-                  className="px-6 py-3 bg-white/80 hover:bg-white text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200"
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          )}
-
-          {cards.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-xl text-gray-600">No words to study right now!</p>
-              <button
-                onClick={backAction}
-                className="mt-4 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Back to {isReviewMode ? 'Library' : 'Vocabulary Set'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      </div>
-    </>
+    <FlashcardStudyView
+      cards={cards}
+      currentIndex={currentIndex}
+      isFlipped={isFlipped}
+      flashcardMode={flashcardMode}
+      viewMode={viewMode as 'flashcards' | 'review'}
+      isNotLearnedOnlyMode={isNotLearnedOnlyMode}
+      selectedGroup={selectedGroup}
+      selectedSet={selectedSet}
+      onFlipCard={flipCard}
+      onNextCard={nextCard}
+      onPreviousCard={previousCard}
+      onShuffle={shuffle}
+      onCorrect={handleCorrect}
+      onIncorrect={handleIncorrect}
+      onBackToLibrary={returnToLibrary}
+      onBackToSetDetail={returnToSetDetail}
+      getCategoryEmoji={getCategoryEmoji}
+      gamificationUI={gamificationUI}
+    />
   );
 }
