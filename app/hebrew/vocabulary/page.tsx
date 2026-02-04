@@ -3,7 +3,8 @@
 // NOTE: Hebrew words should be selectable/copyable so users can look them up
 // Avoid using bg-clip-text on Hebrew text as it clips diacritical marks (nikkud)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress, SetType } from './data/types';
 import { getDueWords, getNewWords, getWordsToStudy, calculateNextReview } from './utils/srs-algorithm';
@@ -17,11 +18,29 @@ import FlashcardRenderer from './components/FlashcardRenderer';
 type ViewMode = 'library' | 'set-detail' | 'flashcards' | 'review' | 'dashboard';
 type FlashcardMode = 'hebrew-to-english' | 'english-to-hebrew';
 
+// Wrapper component to handle Suspense boundary for useSearchParams
 export default function VocabularyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
+          <p className="mt-4 text-gray-600">Loading vocabulary...</p>
+        </div>
+      </div>
+    }>
+      <VocabularyPageContent />
+    </Suspense>
+  );
+}
+
+function VocabularyPageContent() {
+  const searchParams = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('library');
   const [vocabSets, setVocabSets] = useState<VocabSet[]>([]);
   const [activeSetId, setActiveSetIdState] = useState<string>('');
   const [selectedSet, setSelectedSet] = useState<VocabSet | null>(null);
+  const [pendingSetId, setPendingSetId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<VocabGroup | null>(null);
   const [flashcardMode, setFlashcardMode] = useState<FlashcardMode>('hebrew-to-english');
   const [cards, setCards] = useState<HebrewVocabWord[]>([]);
@@ -99,7 +118,24 @@ export default function VocabularyPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Check for ?set= query parameter
+    const setParam = searchParams.get('set');
+    if (setParam) {
+      setPendingSetId(setParam);
+    }
+  }, [searchParams]);
+
+  // Handle opening a specific set when data is loaded
+  useEffect(() => {
+    if (pendingSetId && vocabSets.length > 0 && !isLoading) {
+      const targetSet = vocabSets.find(s => s.id === pendingSetId);
+      if (targetSet) {
+        setSelectedSet(targetSet);
+        setViewMode('set-detail');
+        setPendingSetId(null);
+      }
+    }
+  }, [pendingSetId, vocabSets, isLoading]);
 
   // Calculate stats for each vocab set
   const getSetStats = (set: VocabSet) => {
@@ -408,6 +444,8 @@ export default function VocabularyPage() {
       'alphabet': 'א',
       'syllables': '🎯',
       'grammar': '📖',
+      'foundational': '🏛️',
+      'lesson': '📝',
     };
     return iconMap[setType || 'vocabulary'] || '📚';
   };
@@ -418,6 +456,8 @@ export default function VocabularyPage() {
       'alphabet': 'Alphabet',
       'syllables': 'Syllables',
       'grammar': 'Grammar',
+      'foundational': 'Foundation',
+      'lesson': 'Lesson Practice',
     };
     return labelMap[setType || 'vocabulary'] || 'Vocabulary';
   };
@@ -811,9 +851,9 @@ export default function VocabularyPage() {
             <div className="mt-4 flex flex-wrap gap-3 justify-center">
               <Link
                 href="/hebrew/lessons"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
               >
-                <span>📖</span>
+                <span>&#128214;</span>
                 <span>Lesson Plans</span>
               </Link>
               <button
@@ -871,6 +911,88 @@ export default function VocabularyPage() {
             </div>
           )}
 
+          {/* Foundational Sets (Alphabet, Syllables) */}
+          {!isLoading && vocabSets.filter(set => (set as any).setType === 'foundational').length > 0 && (
+            <div className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">🏛️</span>
+                <h2 className="text-2xl font-bold text-gray-800">Foundations</h2>
+              </div>
+              <p className="text-gray-600 mb-4">Master these fundamentals before diving into vocabulary</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {vocabSets
+                  .filter(set => (set as any).setType === 'foundational')
+                  .map((set) => {
+                  const stats = getSetStats(set);
+                  const isActive = set.isActive;
+
+                return (
+                  <div
+                    key={set.id}
+                    className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 transition-all duration-200 hover:shadow-xl ${
+                      isActive ? 'border-green-400 bg-gradient-to-br from-green-50 to-white' : 'border-[#4a5d49]/30'
+                    }`}
+                  >
+                    {/* Active Badge */}
+                    {isActive && (
+                      <div className="inline-block px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full mb-3">
+                        ✓ ACTIVE
+                      </div>
+                    )}
+
+                    {/* Set Info */}
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                      <span className="text-2xl">{getSetTypeIcon((set as any).setType)}</span>
+                      <span>{set.title}</span>
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">{set.description}</p>
+
+                    {/* Stats */}
+                    <div className="flex gap-4 mb-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-600">Total:</span>
+                        <span className="font-bold text-gray-800">{stats.total}</span>
+                      </div>
+                      {stats.notLearned > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-orange-600">Not Learned:</span>
+                          <span className="font-bold text-orange-700">{stats.notLearned}</span>
+                        </div>
+                      )}
+                      {stats.learned > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-green-600">Learned:</span>
+                          <span className="font-bold text-green-700">{stats.learned}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3 items-center">
+                      <button
+                        onClick={() => viewSetDetail(set)}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        Study
+                      </button>
+                      <button
+                        onClick={() => toggleSetActive(set.id)}
+                        className={`px-4 py-2 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 border-2 ${
+                          isActive
+                            ? 'bg-green-500 text-white border-green-600'
+                            : 'bg-white text-gray-700 border-gray-300'
+                        }`}
+                      >
+                        {isActive ? '✓ Active' : 'Set Active'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            </div>
+          )}
+
           {/* Vocab Sets */}
           {!isLoading && (
             <div>
@@ -884,7 +1006,7 @@ export default function VocabularyPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {vocabSets
-                  .filter(set => (set as any).setType !== 'lesson') // Hide lesson-specific practice sets
+                  .filter(set => (set as any).setType !== 'lesson' && (set as any).setType !== 'foundational')
                   .map((set) => {
                   const stats = getSetStats(set);
                   const isActive = set.isActive;

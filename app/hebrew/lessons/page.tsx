@@ -66,9 +66,8 @@ export default function LessonsPage() {
     const currentLesson = lessons.find(l => l.user_status === 'in_progress') ||
                           lessons.find(l => l.user_status === 'not_started');
 
-    // Count total vocab words from all lessons
     const totalVocab = lessons.reduce((sum, lesson) => {
-      return sum + (lesson.vocabulary_set_ids?.length || 0) * 30; // Assuming ~30 words per set
+      return sum + (lesson.vocabulary_set_ids?.length || 0) * 30;
     }, 0);
 
     setStats({
@@ -85,13 +84,13 @@ export default function LessonsPage() {
       case 'completed':
         return (
           <div className="text-xs px-3 py-1 rounded-full font-semibold bg-green-100 text-green-700">
-            ✓ Complete
+            &#10003; Complete
           </div>
         );
       case 'in_progress':
         return (
-          <div className="text-xs px-3 py-1 rounded-full font-semibold bg-yellow-100 text-yellow-700">
-            → Current
+          <div className="text-xs px-3 py-1 rounded-full font-semibold bg-orange-100 text-orange-700">
+            &#8594; Current
           </div>
         );
       default:
@@ -106,13 +105,13 @@ export default function LessonsPage() {
   const getMonthTitle = (monthNumber: number) => {
     switch (monthNumber) {
       case 1:
-        return 'MONTH 1: Foundation (Weeks 1-4)';
+        return 'Month 1: Foundation (Weeks 1-4)';
       case 2:
-        return 'MONTH 2: Nouns & Sustained Reading (Weeks 5-8)';
+        return 'Month 2: Nouns & Sustained Reading (Weeks 5-8)';
       case 3:
-        return 'MONTH 3: Verbs & Complex Sentences (Weeks 9-12)';
+        return 'Month 3: Verbs & Complex Sentences (Weeks 9-12)';
       default:
-        return `MONTH ${monthNumber}`;
+        return `Month ${monthNumber}`;
     }
   };
 
@@ -128,66 +127,74 @@ export default function LessonsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center">
-        <div className="text-white text-xl">Loading lessons...</div>
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
+          <p className="mt-4 text-gray-600">Loading lessons...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] py-10 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+      <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-6xl">
         {/* Header */}
-        <header className="text-center text-white mb-12">
-          <h1 className="text-5xl font-bold mb-3">📖 Biblical Hebrew Learning Journey</h1>
-          <p className="text-xl opacity-90">Master the Language of Scripture</p>
-          <div className="mt-4">
-            <Link
-              href="/hebrew/vocabulary"
-              className="text-white/80 hover:text-white underline text-sm"
-            >
-              ← Back to Vocabulary
-            </Link>
-          </div>
-        </header>
+        <div className="text-center mb-10">
+          <Link
+            href="/hebrew"
+            className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors mb-4"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Hebrew
+          </Link>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">
+            <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
+              Lesson Plans
+            </span>
+          </h1>
+          <p className="text-lg text-gray-600">Structured weekly curriculum for Biblical Hebrew</p>
+        </div>
 
         {/* Progress Overview */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Your Progress</h2>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Your Progress</h2>
             {stats.completedLessons >= 2 && (
               <Link
                 href="/hebrew/review"
-                className="px-5 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105"
+                className="px-4 py-2 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105"
               >
                 Comprehensive Review
               </Link>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-gray-50 rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold text-[#667eea] mb-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#f5f1e8] rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold text-[#4a5d49] mb-1">
                 {stats.totalLessons}
               </div>
               <div className="text-gray-600 text-sm">Weeks Available</div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold text-[#667eea] mb-2">
+            <div className="bg-[#f5f1e8] rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold text-[#4a5d49] mb-1">
                 {stats.completedLessons}
               </div>
-              <div className="text-gray-600 text-sm">Lessons Completed</div>
+              <div className="text-gray-600 text-sm">Completed</div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold text-[#667eea] mb-2">
+            <div className="bg-[#f5f1e8] rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold text-[#4a5d49] mb-1">
                 {stats.totalVocabWords}+
               </div>
-              <div className="text-gray-600 text-sm">Vocabulary Words</div>
+              <div className="text-gray-600 text-sm">Vocab Words</div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-6 text-center">
-              <div className="text-4xl font-bold text-[#667eea] mb-2">
+            <div className="bg-[#f5f1e8] rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold text-[#4a5d49] mb-1">
                 Week {stats.currentWeek}
               </div>
-              <div className="text-gray-600 text-sm">Current Week</div>
+              <div className="text-gray-600 text-sm">Current</div>
             </div>
           </div>
         </div>
@@ -198,47 +205,47 @@ export default function LessonsPage() {
           const monthLessons = lessonsByMonth[month];
 
           return (
-            <div key={month}>
-              {/* Month Divider */}
-              <div className="bg-white rounded-2xl shadow-lg p-4 mb-8 text-center">
-                <h3 className="text-xl font-bold text-gray-800">
-                  📅 {getMonthTitle(month)}
+            <div key={month} className="mb-10">
+              {/* Month Header */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 mb-6 text-center border border-white/50">
+                <h3 className="text-lg font-bold text-[#4a5d49]">
+                  {getMonthTitle(month)}
                 </h3>
               </div>
 
               {/* Lesson Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {monthLessons.map(lesson => (
                   <Link
                     key={lesson.id}
                     href={`/hebrew/lessons/${lesson.id}`}
-                    className="bg-white rounded-2xl shadow-xl p-8 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                    className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                   >
                     {/* Header */}
-                    <div className="flex justify-between items-center mb-5">
-                      <div className="text-sm font-semibold text-[#667eea] bg-[#e3e8ff] px-4 py-1 rounded-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="text-sm font-semibold text-[#4a5d49] bg-[#e8dcc8] px-3 py-1 rounded-full">
                         WEEK {lesson.week_number}
                       </div>
                       {getStatusBadge(lesson.user_status)}
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
                       {lesson.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-gray-600 leading-relaxed mb-5">
+                    <p className="text-gray-600 text-sm leading-relaxed mb-4">
                       {lesson.description}
                     </p>
 
                     {/* Topics */}
                     {lesson.topics && lesson.topics.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-5">
+                      <div className="flex flex-wrap gap-2 mb-4">
                         {lesson.topics.map((topic, idx) => (
                           <span
                             key={idx}
-                            className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-lg"
+                            className="text-xs bg-[#f5f1e8] text-gray-700 px-2 py-1 rounded"
                           >
                             {topic}
                           </span>
@@ -248,25 +255,25 @@ export default function LessonsPage() {
 
                     {/* Practice Materials */}
                     {lesson.vocabulary_sets && lesson.vocabulary_sets.length > 0 && (
-                      <div className="mb-5">
+                      <div className="mb-4">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                          📚 Practice Materials
+                          Practice Materials
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {lesson.vocabulary_sets.map((vocabSet: any) => (
                             <div
                               key={vocabSet.id}
-                              className="flex items-center justify-between bg-purple-50 px-3 py-2 rounded-lg text-sm"
+                              className="flex items-center justify-between bg-[#f5f1e8] px-3 py-2 rounded-lg text-sm"
                             >
                               <div className="flex items-center gap-2">
-                                <span className="text-purple-600">
-                                  {vocabSet.set_type === 'lesson' ? '⚡' : '📖'}
+                                <span className="text-[#4a5d49]">
+                                  {vocabSet.set_type === 'lesson' ? '&#9889;' : '&#128214;'}
                                 </span>
                                 <span className="text-gray-700 font-medium">
                                   {vocabSet.title}
                                 </span>
                               </div>
-                              <span className="text-purple-600 text-xs font-semibold">
+                              <span className="text-[#4a5d49] text-xs font-semibold">
                                 {vocabSet.total_words || 0} cards
                               </span>
                             </div>
@@ -275,21 +282,15 @@ export default function LessonsPage() {
                       </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3">
-                      <div className="flex-1 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-center py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity">
-                        {lesson.user_status === 'completed' ? 'Review Lesson' : 'Start Lesson'}
-                      </div>
-                      {lesson.vocabulary_set_ids && lesson.vocabulary_set_ids.length > 0 && (
-                        <div className="flex-1 bg-gray-100 text-gray-700 text-center py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
-                          Practice Vocab
-                        </div>
-                      )}
+                    {/* Action Button */}
+                    <div className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white text-center py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity">
+                      {lesson.user_status === 'completed' ? 'Review Lesson' :
+                       lesson.user_status === 'in_progress' ? 'Continue Lesson' : 'Start Lesson'}
                     </div>
 
-                    {/* Progress indicator for in-progress lessons */}
+                    {/* Progress indicator */}
                     {lesson.user_status === 'in_progress' && lesson.started_at && (
-                      <div className="mt-4 text-sm text-gray-500">
+                      <div className="mt-3 text-xs text-gray-500 text-center">
                         Started {new Date(lesson.started_at).toLocaleDateString()}
                       </div>
                     )}
@@ -302,24 +303,19 @@ export default function LessonsPage() {
 
         {/* No lessons state */}
         {lessons.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <div className="text-6xl mb-4">📚</div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-12 text-center">
+            <div className="text-6xl mb-4">&#128218;</div>
             <h3 className="text-2xl font-bold text-gray-800 mb-3">
               No Lessons Available Yet
             </h3>
             <p className="text-gray-600 mb-6">
               Run the database migration to seed Hebrew lessons
             </p>
-            <code className="bg-gray-100 px-4 py-2 rounded-lg text-sm">
+            <code className="bg-[#f5f1e8] px-4 py-2 rounded-lg text-sm text-gray-700">
               npx tsx scripts/07-create-lessons-schema.ts
             </code>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="text-center mt-16 text-white/80 text-sm">
-          <p>kadeillian.com • Biblical Hebrew Learning System</p>
-        </div>
       </div>
     </div>
   );

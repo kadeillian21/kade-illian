@@ -9,7 +9,7 @@
 export type CardType = 'vocabulary' | 'alphabet' | 'syllable' | 'grammar';
 
 // Set type for categorizing vocab sets
-export type SetType = 'vocabulary' | 'alphabet' | 'syllables' | 'grammar';
+export type SetType = 'vocabulary' | 'alphabet' | 'syllables' | 'grammar' | 'foundational' | 'lesson';
 
 // Extra data stored as JSONB for different card types
 export interface AlphabetExtraData {

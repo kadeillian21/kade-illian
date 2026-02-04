@@ -211,8 +211,8 @@ Hebrew is read RIGHT to LEFT. Always start from the right side of the page!`
           url: '/hebrew/reference/alphabet'
         },
         {
-          title: 'Letter Writing Practice',
-          url: '/hebrew/alphabet'
+          title: 'Alphabet Flashcards',
+          url: '/hebrew/vocabulary?set=hebrew-alphabet'
         }
       ]
     };

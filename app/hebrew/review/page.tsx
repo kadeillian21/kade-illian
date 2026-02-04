@@ -214,18 +214,18 @@ export default function ComprehensiveReviewPage() {
   // VIEW: Select lessons
   if (viewMode === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea]/10 via-[#764ba2]/10 to-white py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="text-center space-y-4">
             <Link
-              href="/hebrew/lessons"
-              className="inline-flex items-center text-[#667eea] hover:text-[#764ba2] transition-colors"
+              href="/hebrew"
+              className="inline-flex items-center text-[#4a5d49] hover:text-[#6b7d6a] transition-colors"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to Lessons
+              Back to Hebrew
             </Link>
             <h1 className="text-4xl font-bold text-gray-800">Comprehensive Review</h1>
             <p className="text-gray-600">Select weeks to create a combined review quiz</p>
@@ -233,7 +233,7 @@ export default function ComprehensiveReviewPage() {
 
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#667eea]"></div>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
               <p className="mt-4 text-gray-600">Loading lessons...</p>
             </div>
           ) : lessons.length === 0 ? (
@@ -244,8 +244,8 @@ export default function ComprehensiveReviewPage() {
                 Complete some lessons first to unlock comprehensive review!
               </p>
               <Link
-                href="/hebrew/lessons"
-                className="inline-block px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+                href="/hebrew"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl hover:shadow-lg transition-all"
               >
                 Go to Lessons
               </Link>
@@ -266,7 +266,7 @@ export default function ComprehensiveReviewPage() {
                     disabled={selectedLessonIds.size === 0}
                     className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                       selectedLessonIds.size > 0
-                        ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:shadow-lg'
+                        ? 'bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white hover:shadow-lg'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -288,7 +288,7 @@ export default function ComprehensiveReviewPage() {
                       <h3 className="text-xl font-bold text-gray-800">{getMonthTitle(month)}</h3>
                       <button
                         onClick={() => allSelected ? deselectAllInMonth(month) : selectAllInMonth(month)}
-                        className="text-sm text-[#667eea] hover:text-[#764ba2] font-medium"
+                        className="text-sm text-[#4a5d49] hover:text-[#6b7d6a] font-medium"
                       >
                         {allSelected ? 'Deselect All' : 'Select All'}
                       </button>
@@ -303,14 +303,14 @@ export default function ComprehensiveReviewPage() {
                             onClick={() => toggleLesson(lesson.id)}
                             className={`p-4 rounded-xl border-2 text-left transition-all ${
                               isSelected
-                                ? 'border-[#667eea] bg-[#667eea]/10'
-                                : 'border-gray-200 hover:border-[#667eea]/50'
+                                ? 'border-[#4a5d49] bg-[#4a5d49]/10'
+                                : 'border-gray-200 hover:border-[#4a5d49]/50'
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                                 isSelected
-                                  ? 'border-[#667eea] bg-[#667eea]'
+                                  ? 'border-[#4a5d49] bg-[#4a5d49]'
                                   : 'border-gray-300'
                               }`}>
                                 {isSelected && (
@@ -341,7 +341,7 @@ export default function ComprehensiveReviewPage() {
   // VIEW: Quiz
   if (viewMode === 'quiz' && currentQuestion) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea]/10 via-[#764ba2]/10 to-white py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] py-8 px-4">
         <div className="max-w-3xl mx-auto space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
@@ -363,7 +363,7 @@ export default function ComprehensiveReviewPage() {
             </div>
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-500"
+                className="h-full bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] transition-all duration-500"
                 style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
               />
             </div>
@@ -372,7 +372,7 @@ export default function ComprehensiveReviewPage() {
           {/* Question Card */}
           <div className="bg-white rounded-2xl p-8 shadow-lg space-y-6">
             <div className="space-y-2">
-              <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+              <div className="inline-block px-3 py-1 bg-[#e8dcc8] text-[#4a5d49] rounded-full text-xs font-medium">
                 Week {currentQuestion.weekNumber}
               </div>
               <h2 className="text-2xl font-semibold text-gray-800 leading-relaxed">
@@ -399,8 +399,8 @@ export default function ComprehensiveReviewPage() {
                           : showIncorrect
                           ? 'border-red-500 bg-red-50'
                           : isSelected
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                          ? 'border-[#4a5d49] bg-[#f5f1e8]'
+                          : 'border-gray-200 hover:border-[#6b7d6a] hover:bg-[#f5f1e8]'
                       } ${showFeedback ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <div className="flex items-center gap-3">
@@ -410,7 +410,7 @@ export default function ComprehensiveReviewPage() {
                             : showIncorrect
                             ? 'bg-red-500 text-white'
                             : isSelected
-                            ? 'bg-purple-500 text-white'
+                            ? 'bg-[#4a5d49] text-white'
                             : 'bg-gray-200 text-gray-600'
                         }`}>
                           {String.fromCharCode(65 + index)}
@@ -477,7 +477,7 @@ export default function ComprehensiveReviewPage() {
                   disabled={!selectedAnswer}
                   className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                     selectedAnswer
-                      ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:shadow-lg'
+                      ? 'bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white hover:shadow-lg'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
@@ -486,7 +486,7 @@ export default function ComprehensiveReviewPage() {
               ) : (
                 <button
                   onClick={handleNextQuestion}
-                  className="px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                  className="px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   {isLastQuestion ? 'See Results' : 'Next Question'}
                 </button>
@@ -503,7 +503,7 @@ export default function ComprehensiveReviewPage() {
     const passed = totalScore >= 70;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea]/10 via-[#764ba2]/10 to-white py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] py-8 px-4">
         <div className="max-w-3xl mx-auto space-y-6">
           {/* Header */}
           <div className="text-center space-y-4">
@@ -512,7 +512,7 @@ export default function ComprehensiveReviewPage() {
             </div>
             <h1 className={`text-6xl font-bold ${
               passed
-                ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent'
+                ? 'bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent'
                 : 'text-gray-700'
             }`}>
               {totalScore}%
@@ -525,9 +525,9 @@ export default function ComprehensiveReviewPage() {
           {/* Overall Stats */}
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="p-4 bg-[#f5f1e8] rounded-lg">
                 <p className="text-sm text-gray-600">Questions</p>
-                <p className="text-3xl font-bold text-purple-600">{attempts.length}</p>
+                <p className="text-3xl font-bold text-[#4a5d49]">{attempts.length}</p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-gray-600">Correct</p>
@@ -588,10 +588,10 @@ export default function ComprehensiveReviewPage() {
               New Review
             </button>
             <Link
-              href="/hebrew/lessons"
-              className="px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+              href="/hebrew"
+              className="px-6 py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
             >
-              Back to Lessons
+              Back to Hebrew
             </Link>
           </div>
         </div>
@@ -601,7 +601,7 @@ export default function ComprehensiveReviewPage() {
 
   // Loading state
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667eea]/10 via-[#764ba2]/10 to-white flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] flex items-center justify-center">
       <div className="text-2xl text-gray-600">Loading...</div>
     </div>
   );
