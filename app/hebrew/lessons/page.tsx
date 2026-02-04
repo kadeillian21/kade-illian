@@ -153,7 +153,17 @@ export default function LessonsPage() {
 
         {/* Progress Overview */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 mb-10">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Progress</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Your Progress</h2>
+            {stats.completedLessons >= 2 && (
+              <Link
+                href="/hebrew/review"
+                className="px-5 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105"
+              >
+                Comprehensive Review
+              </Link>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-gray-50 rounded-xl p-6 text-center">
               <div className="text-4xl font-bold text-[#667eea] mb-2">

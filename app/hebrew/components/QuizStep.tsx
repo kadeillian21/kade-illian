@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { QuizQuestion, QuizAttempt } from '../vocabulary/data/types';
 
 interface QuizStepProps {
@@ -9,6 +9,16 @@ interface QuizStepProps {
   minScore: number;
   onPass: (score: number, attempts: QuizAttempt[]) => void;
   onFail: (score: number, attempts: QuizAttempt[]) => void;
+}
+
+// Fisher-Yates shuffle algorithm - creates a new shuffled array
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 export default function QuizStep({ questions, lessonId, minScore, onPass, onFail }: QuizStepProps) {
@@ -20,6 +30,24 @@ export default function QuizStep({ questions, lessonId, minScore, onPass, onFail
   const [score, setScore] = useState(0);
 
   const currentQuestion = questions[currentQuestionIndex];
+
+  // Shuffle options once per question (memoized by question index)
+  // This ensures options stay in same order during feedback display
+  const [shuffledOptionsMap, setShuffledOptionsMap] = useState<Record<number, string[]>>({});
+
+  // Get or create shuffled options for current question
+  const shuffledOptions = useMemo(() => {
+    if (shuffledOptionsMap[currentQuestionIndex]) {
+      return shuffledOptionsMap[currentQuestionIndex];
+    }
+    if (currentQuestion?.options) {
+      const shuffled = shuffleArray(currentQuestion.options);
+      // Store in state so it persists during feedback
+      setShuffledOptionsMap(prev => ({ ...prev, [currentQuestionIndex]: shuffled }));
+      return shuffled;
+    }
+    return [];
+  }, [currentQuestionIndex, currentQuestion?.options, shuffledOptionsMap]);
   const totalQuestions = questions.length;
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
@@ -123,9 +151,9 @@ export default function QuizStep({ questions, lessonId, minScore, onPass, onFail
           </div>
 
           {/* Answer Options */}
-          {currentQuestion.questionType === 'multiple_choice' && currentQuestion.options && (
+          {currentQuestion.questionType === 'multiple_choice' && shuffledOptions.length > 0 && (
             <div className="space-y-3">
-              {currentQuestion.options.map((option, index) => {
+              {shuffledOptions.map((option, index) => {
                 const isSelected = selectedAnswer === option;
                 const showCorrect = showFeedback && option === currentQuestion.correctAnswer;
                 const showIncorrect = showFeedback && isSelected && !isCorrect;

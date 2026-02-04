@@ -254,21 +254,10 @@ export default function VocabularyPage() {
     }
   };
 
-  // Auto-start session when entering flashcard mode
-  useEffect(() => {
-    if ((viewMode === 'flashcards' || viewMode === 'review') && !sessionId) {
-      startSession();
-    }
-  }, [viewMode]);
-
-  // Auto-end session when leaving study mode
-  useEffect(() => {
-    return () => {
-      if (sessionId) {
-        endSession();
-      }
-    };
-  }, [sessionId]);
+  // NOTE: Automatic session time tracking has been REMOVED to prevent double-counting.
+  // Time is now tracked solely by HebrewStatsNavbar which saves to study_sessions every 30 seconds.
+  // The startSession/endSession functions are kept for tracking cards studied per session,
+  // but they no longer record time to the database (that's handled by the navbar timer).
 
   const startStudying = (group: VocabGroup, mode: FlashcardMode) => {
     setSelectedGroup(group);

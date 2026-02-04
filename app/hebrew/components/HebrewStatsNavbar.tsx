@@ -10,6 +10,14 @@ interface Stats {
   notLearned: number;
 }
 
+interface TimeStats {
+  day: { seconds: number; minutes: number };
+  week: { seconds: number; minutes: number };
+  month: { seconds: number; minutes: number; hours: number };
+  year: { seconds: number; minutes: number; hours: number };
+  total: { seconds: number; minutes: number; hours: number };
+}
+
 export default function HebrewStatsNavbar() {
   // Timer state
   const [isRunning, setIsRunning] = useState(false);
@@ -17,6 +25,12 @@ export default function HebrewStatsNavbar() {
   const [dailyTotalSeconds, setDailyTotalSeconds] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveRef = useRef(0);
+
+  // Time history dropdown state
+  const [showTimeHistory, setShowTimeHistory] = useState(false);
+  const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
+  const [loadingTimeStats, setLoadingTimeStats] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Stats state
   const [stats, setStats] = useState<Stats>({
@@ -158,6 +172,53 @@ export default function HebrewStatsNavbar() {
     }
   }, []);
 
+  // Fetch time history stats
+  const fetchTimeStats = async () => {
+    if (loadingTimeStats) return;
+    setLoadingTimeStats(true);
+    try {
+      const res = await fetch("/api/vocab/stats/time");
+      if (res.ok) {
+        const data = await res.json();
+        setTimeStats(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch time stats:", error);
+    } finally {
+      setLoadingTimeStats(false);
+    }
+  };
+
+  // Toggle time history dropdown
+  const toggleTimeHistory = () => {
+    if (!showTimeHistory) {
+      fetchTimeStats();
+    }
+    setShowTimeHistory(!showTimeHistory);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowTimeHistory(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Format time for display in dropdown
+  const formatTimeDisplay = (minutes: number, hours?: number): string => {
+    if (hours && hours > 0) {
+      const remainingMins = minutes % 60;
+      if (remainingMins > 0) return `${hours}h ${remainingMins}m`;
+      return `${hours}h`;
+    }
+    return `${minutes}m`;
+  };
+
   // Timer interval effect
   useEffect(() => {
     if (isRunning) {
@@ -240,10 +301,65 @@ export default function HebrewStatsNavbar() {
             )}
           </button>
 
-          {/* Daily total */}
-          <div className="text-sm text-gray-600">
-            <span className="font-medium text-[#4a5d49]">Today:</span>{" "}
-            {formatHumanTime(dailyTotalSeconds + (isRunning ? sessionSeconds - lastSaveRef.current : 0))}
+          {/* Daily total with time history dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={toggleTimeHistory}
+              className="text-sm text-gray-600 hover:text-[#4a5d49] transition-colors flex items-center gap-1"
+            >
+              <span className="font-medium text-[#4a5d49]">Today:</span>{" "}
+              {formatHumanTime(dailyTotalSeconds + (isRunning ? sessionSeconds - lastSaveRef.current : 0))}
+              <svg
+                className={`w-4 h-4 transition-transform ${showTimeHistory ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Time History Dropdown */}
+            {showTimeHistory && (
+              <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-3 z-50">
+                <div className="px-4 pb-2 border-b border-gray-100">
+                  <h3 className="font-semibold text-gray-800 text-sm">Study Time History</h3>
+                </div>
+
+                {loadingTimeStats ? (
+                  <div className="px-4 py-3 text-center text-gray-500 text-sm">Loading...</div>
+                ) : timeStats ? (
+                  <div className="px-4 py-2 space-y-2">
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-gray-600 text-sm">Today</span>
+                      <span className="font-semibold text-[#4a5d49]">
+                        {formatTimeDisplay(timeStats.day.minutes)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-gray-600 text-sm">This Week</span>
+                      <span className="font-semibold text-[#4a5d49]">
+                        {formatTimeDisplay(timeStats.week.minutes, timeStats.week.minutes >= 60 ? Math.floor(timeStats.week.minutes / 60) : undefined)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-gray-600 text-sm">This Month</span>
+                      <span className="font-semibold text-[#4a5d49]">
+                        {formatTimeDisplay(timeStats.month.minutes, timeStats.month.hours)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1.5 border-t border-gray-100 mt-2 pt-2">
+                      <span className="text-gray-600 text-sm">All Time</span>
+                      <span className="font-bold text-[#4a5d49]">
+                        {formatTimeDisplay(timeStats.total.minutes, timeStats.total.hours)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 text-center text-gray-500 text-sm">No data</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
