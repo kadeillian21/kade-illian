@@ -9,9 +9,11 @@ import Link from 'next/link';
 import { HebrewVocabWord, VocabSet, VocabGroup, UserProgress, SetType } from './data/types';
 import { getDueWords, getNewWords, getWordsToStudy, calculateNextReview } from './utils/srs-algorithm';
 import { suggestStudyDays } from './utils/organizer-v2';
+import { progressQueue } from './utils/progress-queue';
 import ProgressDashboard from './components/ProgressDashboard';
 import LevelUpModal from './components/LevelUpModal';
 import AchievementToast from './components/AchievementToast';
+import SyncErrorToast from './components/SyncErrorToast';
 import Confetti from './components/Confetti';
 import FlashcardRenderer from './components/FlashcardRenderer';
 import LibraryView from './components/LibraryView';
@@ -60,6 +62,7 @@ function VocabularyPageContent() {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isNotLearnedOnlyMode, setIsNotLearnedOnlyMode] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Helper: Refresh progress data for words after update
   // Words now come from DB with progress already attached, but we need to
@@ -555,99 +558,94 @@ function VocabularyPageContent() {
       }, 500);
     }
 
-    // Make API calls in the background (non-blocking)
-    // These happen AFTER the UI has already updated
-    (async () => {
-      try {
-        const response = await fetch('/api/vocab/progress/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wordId: updatedWord.id,
-            correct: true,
-            level: updatedWord.level,
-            nextReview: updatedWord.nextReview,
-            lastReviewed: updatedWord.lastReviewed,
-            reviewCount: updatedWord.reviewCount,
-            correctCount: updatedWord.correctCount,
-          }),
-        });
+    // Use progress queue for reliable updates with retry logic
+    progressQueue.setCallbacks({
+      onSuccess: async (wordId, stats) => {
+        // Update stats with DB response
+        setProgress((prev: any) => ({
+          ...prev,
+          stats: stats,
+        }));
 
-        if (response.ok) {
-          const data = await response.json();
+        // 🎉 Award XP for correct answer!
+        try {
+          const xpResponse = await fetch('/api/vocab/xp/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              xpAmount: 10, // 10 XP per correct card
+              reason: 'correct_answer',
+            }),
+          });
 
-          // Update stats with DB response
-          setProgress((prev: any) => ({
-            ...prev,
-            stats: data.stats,
-          }));
+          if (xpResponse.ok) {
+            const xpData = await xpResponse.json();
 
-          // 🎉 Award XP for correct answer!
-          try {
-            const xpResponse = await fetch('/api/vocab/xp/add', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                xpAmount: 10, // 10 XP per correct card
-                reason: 'correct_answer',
-              }),
-            });
-
-            if (xpResponse.ok) {
-              const xpData = await xpResponse.json();
-
-              // Check for level up!
-              if (xpData.leveledUp) {
-                setNewLevel(xpData.newLevel);
-                setShowLevelUp(true);
-              }
-
-              // Check for new achievements!
-              if (xpData.unlockedAchievements && xpData.unlockedAchievements.length > 0) {
-                setAchievements(prev => [...prev, ...xpData.unlockedAchievements]);
-              }
-
-              // Update stats with new XP/level
-              setProgress((prev: any) => ({
-                ...prev,
-                stats: {
-                  ...prev.stats,
-                  xp: xpData.totalXP,
-                  level: xpData.level,
-                },
-              }));
+            // Check for level up!
+            if (xpData.leveledUp) {
+              setNewLevel(xpData.newLevel);
+              setShowLevelUp(true);
             }
-          } catch (xpError) {
-            console.error('Error awarding XP:', xpError);
-          }
 
-          // Update daily goal progress
-          try {
-            const goalResponse = await fetch('/api/vocab/daily-goal/update', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ cardsStudied: 1 }),
-            });
-
-            if (goalResponse.ok) {
-              const goalData = await goalResponse.json();
-              setProgress((prev: any) => ({
-                ...prev,
-                stats: {
-                  ...prev.stats,
-                  cardsToday: goalData.cardsToday,
-                },
-              }));
+            // Check for new achievements!
+            if (xpData.unlockedAchievements && xpData.unlockedAchievements.length > 0) {
+              setAchievements(prev => [...prev, ...xpData.unlockedAchievements]);
             }
-          } catch (goalError) {
-            console.error('Error updating daily goal:', goalError);
+
+            // Update stats with new XP/level
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                xp: xpData.totalXP,
+                level: xpData.level,
+              },
+            }));
           }
+        } catch (xpError) {
+          console.error('Error awarding XP:', xpError);
         }
-      } catch (error) {
-        console.error('Error updating progress:', error);
-        // Could add a toast notification here for failed updates
-      }
-    })();
+
+        // Update daily goal progress
+        try {
+          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardsStudied: 1 }),
+          });
+
+          if (goalResponse.ok) {
+            const goalData = await goalResponse.json();
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                cardsToday: goalData.cardsToday,
+              },
+            }));
+          }
+        } catch (goalError) {
+          console.error('Error updating daily goal:', goalError);
+        }
+      },
+      onError: (wordId, error) => {
+        console.error(`Failed to save progress for ${wordId}:`, error);
+        setSyncError(`Failed to save progress. Your changes may not be saved.`);
+      },
+      onRetry: (wordId, attempt) => {
+        console.log(`Retrying progress update for ${wordId} (attempt ${attempt})`);
+      },
+    });
+
+    progressQueue.queueUpdate({
+      wordId: updatedWord.id,
+      correct: true,
+      level: updatedWord.level,
+      nextReview: updatedWord.nextReview,
+      lastReviewed: updatedWord.lastReviewed,
+      reviewCount: updatedWord.reviewCount,
+      correctCount: updatedWord.correctCount,
+    });
   };
 
   const handleIncorrect = async () => {
@@ -695,60 +693,55 @@ function VocabularyPageContent() {
       }
     }, 500);
 
-    // Make API calls in the background (non-blocking)
-    // These happen AFTER the UI has already updated
-    (async () => {
-      try {
-        const response = await fetch('/api/vocab/progress/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wordId: updatedWord.id,
-            correct: false,
-            level: updatedWord.level,
-            nextReview: updatedWord.nextReview,
-            lastReviewed: updatedWord.lastReviewed,
-            reviewCount: updatedWord.reviewCount,
-            correctCount: updatedWord.correctCount,
-          }),
-        });
+    // Use progress queue for reliable updates with retry logic
+    progressQueue.setCallbacks({
+      onSuccess: async (wordId, stats) => {
+        // Update stats with DB response
+        setProgress((prev: any) => ({
+          ...prev,
+          stats: stats,
+        }));
 
-        if (response.ok) {
-          const data = await response.json();
+        // Update daily goal progress (even for incorrect - you still studied!)
+        try {
+          const goalResponse = await fetch('/api/vocab/daily-goal/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardsStudied: 1 }),
+          });
 
-          // Update stats with DB response
-          setProgress((prev: any) => ({
-            ...prev,
-            stats: data.stats,
-          }));
-
-          // Update daily goal progress (even for incorrect - you still studied!)
-          try {
-            const goalResponse = await fetch('/api/vocab/daily-goal/update', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ cardsStudied: 1 }),
-            });
-
-            if (goalResponse.ok) {
-              const goalData = await goalResponse.json();
-              setProgress((prev: any) => ({
-                ...prev,
-                stats: {
-                  ...prev.stats,
-                  cardsToday: goalData.cardsToday,
-                },
-              }));
-            }
-          } catch (goalError) {
-            console.error('Error updating daily goal:', goalError);
+          if (goalResponse.ok) {
+            const goalData = await goalResponse.json();
+            setProgress((prev: any) => ({
+              ...prev,
+              stats: {
+                ...prev.stats,
+                cardsToday: goalData.cardsToday,
+              },
+            }));
           }
+        } catch (goalError) {
+          console.error('Error updating daily goal:', goalError);
         }
-      } catch (error) {
-        console.error('Error updating progress:', error);
-        // Could add a toast notification here for failed updates
-      }
-    })();
+      },
+      onError: (wordId, error) => {
+        console.error(`Failed to save progress for ${wordId}:`, error);
+        setSyncError(`Failed to save progress. Your changes may not be saved.`);
+      },
+      onRetry: (wordId, attempt) => {
+        console.log(`Retrying progress update for ${wordId} (attempt ${attempt})`);
+      },
+    });
+
+    progressQueue.queueUpdate({
+      wordId: updatedWord.id,
+      correct: false,
+      level: updatedWord.level,
+      nextReview: updatedWord.nextReview,
+      lastReviewed: updatedWord.lastReviewed,
+      reviewCount: updatedWord.reviewCount,
+      correctCount: updatedWord.correctCount,
+    });
   };
 
 
@@ -808,6 +801,18 @@ function VocabularyPageContent() {
         active={showConfetti}
         onComplete={() => setShowConfetti(false)}
       />
+
+      {/* Sync Error Toast */}
+      {syncError && (
+        <SyncErrorToast
+          message={syncError}
+          onRetry={() => {
+            setSyncError(null);
+            progressQueue.retryFailed();
+          }}
+          onDismiss={() => setSyncError(null)}
+        />
+      )}
     </>
   );
 
