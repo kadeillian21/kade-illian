@@ -149,7 +149,7 @@ export const SEMANTIC_GROUPS = {
 
 // Interactive Lesson Step Types
 
-export type StepType = 'objective' | 'concept' | 'scripture' | 'vocabulary' | 'quiz' | 'completion';
+export type StepType = 'objective' | 'concept' | 'adjective-comparison' | 'scripture' | 'vocabulary' | 'quiz' | 'completion';
 
 export interface ObjectiveStepContent {
   title: string;
@@ -197,6 +197,35 @@ export interface VocabularyStepContent {
   instructions: string;
 }
 
+// Adjective pair for side-by-side comparison
+export interface AdjectivePair {
+  masculine: {
+    hebrew: string;
+    transliteration: string;
+    pronunciation: string;
+  };
+  feminine: {
+    hebrew: string;
+    transliteration: string;
+    pronunciation: string;
+  };
+  english: string;
+  notes?: string;
+  patternType?: 'regular' | 'irregular'; // regular = adds ה, irregular = stem change
+}
+
+export interface AdjectiveComparisonStepContent {
+  title: string;
+  description: string;
+  adjectives: AdjectivePair[];
+  patternExplanation: {
+    title: string;
+    rules: string[];
+    exceptions?: string[];
+  };
+  practiceMode?: 'view' | 'quiz'; // view = just display, quiz = interactive
+}
+
 export interface CompletionStepContent {
   celebrationMessage: string;
   xpAwarded: number;
@@ -212,6 +241,7 @@ export interface CompletionStepContent {
 export type StepContent =
   | ObjectiveStepContent
   | ConceptStepContent
+  | AdjectiveComparisonStepContent
   | ScriptureStepContent
   | VocabularyStepContent
   | CompletionStepContent;
