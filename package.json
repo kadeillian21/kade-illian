@@ -33,6 +33,8 @@
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
+    "fast-xml-parser": "^5.3.5",
+    "morphhb": "^2.0.2",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

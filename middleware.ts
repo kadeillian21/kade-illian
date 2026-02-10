@@ -2,7 +2,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that require authentication
-const protectedRoutes = ['/hebrew/vocabulary', '/hebrew/flashcards', '/hebrew/lessons'];
+const protectedRoutes = ['/hebrew/vocabulary', '/hebrew/flashcards', '/hebrew/lessons', '/hebrew/bible'];
 const authRoutes = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {

@@ -299,6 +299,13 @@ export default function HebrewHubPage() {
           <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Links</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
+              href="/hebrew/bible"
+              className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors"
+            >
+              <div className="text-2xl mb-2">&#128220;</div>
+              <div className="font-medium text-gray-800">Bible Reader</div>
+            </Link>
+            <Link
               href="/hebrew/lessons"
               className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors"
             >
