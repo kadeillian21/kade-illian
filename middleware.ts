@@ -2,7 +2,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that require authentication
-const protectedRoutes = ['/hebrew/vocabulary', '/hebrew/flashcards', '/hebrew/lessons', '/hebrew/bible'];
+const protectedRoutes = ['/hebrew/vocabulary', '/hebrew/flashcards', '/hebrew/lessons', '/hebrew/bible', '/hebrew/review'];
 const authRoutes = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
 
   // If user is logged in and trying to access auth pages, redirect to app
   if (user && authRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/hebrew/vocabulary', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // If user is NOT logged in and trying to access protected routes

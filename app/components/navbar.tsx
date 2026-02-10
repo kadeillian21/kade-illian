@@ -4,6 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "./utils";
 import UserMenu from "./UserMenu";
+import NavDropdown from "./NavDropdown";
+
+const hebrewItems = [
+  { label: "Hub", href: "/hebrew" },
+  { label: "Lessons", href: "/hebrew/lessons" },
+  { label: "Vocabulary", href: "/hebrew/vocabulary" },
+  { label: "Bible", href: "/hebrew/bible" },
+  { label: "Review", href: "/hebrew/review" },
+];
+
+const greekItems = [
+  { label: "Hub", href: "/greek" },
+  { label: "Lessons", href: "/greek/lessons" },
+  { label: "Vocabulary", href: "/greek/vocabulary" },
+];
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -25,40 +40,32 @@ const Navbar = () => {
                 : "text-gray-600 hover:text-[#4a5d49] hover:bg-[#f5f1e8]"
             )}
           >
-            Home
+            Dashboard
           </Link>
 
-          {/* Hebrew - Direct link to Hebrew hub */}
-          <Link
+          <NavDropdown
+            label="Hebrew"
             href="/hebrew"
-            className={cn(
-              "px-4 py-2 text-sm font-medium rounded-full transition-all",
-              pathname.startsWith("/hebrew")
-                ? "bg-[#6b7d6a] text-white"
-                : "text-gray-600 hover:text-[#4a5d49] hover:bg-[#f5f1e8]"
-            )}
-          >
-            Hebrew
-          </Link>
+            items={hebrewItems}
+          />
 
-          {/* Greek - Coming Soon */}
-          <span
-            className="px-4 py-2 text-sm font-medium rounded-full text-gray-400 cursor-not-allowed"
-            title="Coming Soon"
-          >
-            Greek
-          </span>
+          <NavDropdown
+            label="Greek"
+            href="/greek"
+            items={greekItems}
+            disabled
+          />
 
           <Link
-            href="/about"
+            href="/portfolio"
             className={cn(
               "px-4 py-2 text-sm font-medium rounded-full transition-all",
-              pathname === "/about"
+              pathname.startsWith("/portfolio")
                 ? "bg-[#6b7d6a] text-white"
-                : "text-gray-600 hover:text-[#4a5d49] hover:bg-[#f5f1e8]"
+                : "text-gray-500 hover:text-[#4a5d49] hover:bg-[#f5f1e8]"
             )}
           >
-            About
+            Portfolio
           </Link>
 
           <div className="ml-2 pl-2 border-l border-gray-200">

@@ -23,9 +23,9 @@ const frankRuhl = Frank_Ruhl_Libre({
 });
 
 export const metadata: Metadata = {
-  title: "Kade Illian | Software Engineer",
-  description: "Software engineer and developer portfolio showcasing projects and skills",
-  keywords: ["portfolio", "software engineer", "web development", "developer"],
+  title: "Kade Illian | Learning Dashboard",
+  description: "Biblical Hebrew and Koine Greek language learning platform",
+  keywords: ["hebrew", "greek", "biblical languages", "vocabulary", "learning"],
 };
 
 export default function RootLayout({

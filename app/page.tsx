@@ -1,179 +1,376 @@
-export default function Home() {
-  return (
-    <div className="bg-white">
-      {/* Hero Section */}
-      <section className="relative py-24 overflow-hidden bg-gradient-to-br from-[#f5f1e8] via-[#e8dcc8] to-white">
-        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10"></div>
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-block mb-6 px-4 py-2 rounded-full bg-gradient-to-r from-[#d4c5b0] to-[#e8dcc8] border border-[#d4c5b0]">
-              <span className="text-sm font-medium bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                Welcome to my portfolio
-              </span>
-            </div>
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+interface Stats {
+  streak: number;
+  wordsLearned: number;
+  totalWords: number;
+  notLearned: number;
+  lessonsCompleted: number;
+  totalLessons: number;
+}
+
+interface TimeStats {
+  day: { minutes: number };
+  week: { minutes: number };
+  month: { hours: number; minutes: number };
+  total: { hours: number; minutes: number };
+}
+
+interface CurrentLesson {
+  id: string;
+  title: string;
+  weekNumber: number;
+  status: 'not_started' | 'in_progress' | 'completed';
+}
+
+export default function DashboardPage() {
+  const [stats, setStats] = useState<Stats>({
+    streak: 0,
+    wordsLearned: 0,
+    totalWords: 0,
+    notLearned: 0,
+    lessonsCompleted: 0,
+    totalLessons: 0,
+  });
+  const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<CurrentLesson | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    async function checkAuthAndLoad() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+
+        if (!supabase) {
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        setIsAuthenticated(true);
+
+        // Fetch vocab stats
+        const setsRes = await fetch('/api/vocab/sets');
+        if (setsRes.ok) {
+          const sets = await setsRes.json();
+          const allWords = sets.flatMap((set: any) =>
+            (set.groups || []).flatMap((group: any) => group.words || [])
+          );
+          const learned = allWords.filter((w: any) => (w.level || 0) >= 1).length;
+          const notLearned = allWords.filter((w: any) => !w.level || w.level === 0).length;
+
+          setStats(prev => ({
+            ...prev,
+            wordsLearned: learned,
+            totalWords: allWords.length,
+            notLearned,
+          }));
+        }
+
+        // Fetch streak
+        const progressRes = await fetch('/api/vocab/progress');
+        if (progressRes.ok) {
+          const progressData = await progressRes.json();
+          setStats(prev => ({
+            ...prev,
+            streak: progressData.stats?.streak || 0,
+          }));
+        }
+
+        // Fetch lessons
+        const lessonsRes = await fetch('/api/lessons?language=hebrew');
+        if (lessonsRes.ok) {
+          const lessonsData = await lessonsRes.json();
+          if (lessonsData.success && Array.isArray(lessonsData.lessons)) {
+            const lessons = lessonsData.lessons;
+            const completed = lessons.filter((l: any) => l.user_status === 'completed').length;
+
+            setStats(prev => ({
+              ...prev,
+              lessonsCompleted: completed,
+              totalLessons: lessons.length,
+            }));
+
+            const inProgress = lessons.find((l: any) => l.user_status === 'in_progress');
+            const nextLesson = lessons.find((l: any) => l.user_status === 'not_started');
+            const current = inProgress || nextLesson;
+
+            if (current) {
+              setCurrentLesson({
+                id: current.id,
+                title: current.title,
+                weekNumber: current.week_number,
+                status: current.user_status,
+              });
+            }
+          }
+        }
+
+        // Fetch time stats
+        const timeRes = await fetch('/api/vocab/stats/time');
+        if (timeRes.ok) {
+          const timeData = await timeRes.json();
+          setTimeStats(timeData);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkAuthAndLoad();
+  }, []);
+
+  const formatTime = (minutes: number, hours?: number): string => {
+    if (hours && hours > 0) {
+      const remainingMins = minutes % 60;
+      if (remainingMins > 0) return `${hours}h ${remainingMins}m`;
+      return `${hours}h`;
+    }
+    if (minutes === 0) return '0m';
+    return `${minutes}m`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#4a5d49]"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated — show welcome page
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+        <div className="container py-24 px-4 sm:px-6 lg:px-8 mx-auto max-w-4xl">
+          <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                Software Engineer
-              </span>
-              <br />
-              <span className="text-gray-900">& Developer</span>
+              <span className="text-[#4a5d49]">Learn Biblical Languages</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-              Building innovative solutions with modern technologies
+            <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-2xl mx-auto">
+              Study Biblical Hebrew and Koine Greek with structured lessons,
+              spaced repetition vocabulary, and an interactive Bible reader.
             </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a href="#projects" className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-medium hover:shadow-xl hover:scale-105 transition-all duration-200 shadow-lg">
-                View Projects
-              </a>
-              <a href="#contact" className="px-8 py-4 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:border-blue-500 hover:text-[#4a5d49] hover:shadow-lg transition-all duration-200 bg-white">
-                Contact Me
-              </a>
+            <Link
+              href="/login"
+              className="inline-block px-8 py-4 rounded-xl bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white font-medium hover:shadow-xl hover:scale-105 transition-all duration-200 shadow-lg text-lg"
+            >
+              Sign In to Get Started
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 text-center">
+              <div className="text-4xl mb-4 font-[family-name:var(--font-hebrew)] text-[#4a5d49]">&#1488;</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Biblical Hebrew</h3>
+              <p className="text-gray-600 text-sm">14 structured weekly lessons from alphabet to reading Genesis</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 text-center">
+              <div className="text-4xl mb-4">&#127183;</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Smart Vocabulary</h3>
+              <p className="text-gray-600 text-sm">Spaced repetition flashcards organized by semantic groups</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 text-center">
+              <div className="text-4xl mb-4">&#128220;</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Bible Reader</h3>
+              <p className="text-gray-600 text-sm">Read Hebrew text with tap-to-translate and morphology</p>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    );
+  }
 
-      {/* Projects Section */}
-      <section id="projects" className="py-24 bg-white">
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                My Projects
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600">
-              A showcase of my recent work and technical expertise
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Project Card */}
-            <div className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300">
-              <div className="h-48 bg-gradient-to-br from-[#d4c5b0] to-[#e8dcc8] flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#6b7d6a]/20 to-[#8a9a8a]/20 group-hover:scale-110 transition-transform duration-300"></div>
-                <span className="text-gray-500 text-sm relative z-10">Project Image</span>
+  // Authenticated — show learning dashboard
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8]">
+      <div className="container py-12 px-4 sm:px-6 lg:px-8 mx-auto max-w-5xl">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-gray-800">Learning Dashboard</h1>
+          <p className="text-gray-600 mt-1">Your biblical language learning at a glance</p>
+        </div>
+
+        {/* Language Cards */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Hebrew Card */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-3xl font-[family-name:var(--font-hebrew)] text-[#4a5d49]">&#1506;</span>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Biblical Hebrew</h2>
+                <p className="text-sm text-gray-500">Active</p>
               </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-[#4a5d49] transition-colors">Project Title</h3>
-                <p className="text-gray-600 mb-4">
-                  A modern web application built with cutting-edge technologies.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-3 py-1 text-xs font-medium bg-[#d4c5b0] text-[#4a5d49] rounded-full">
-                    React
-                  </span>
-                  <span className="px-3 py-1 text-xs font-medium bg-[#d4c5b0] text-[#4a5d49] rounded-full">
-                    Next.js
-                  </span>
-                  <span className="px-3 py-1 text-xs font-medium bg-[#d4c5b0] text-[#4a5d49] rounded-full">
-                    TypeScript
-                  </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="text-center p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-2xl font-bold text-[#4a5d49] flex items-center justify-center gap-1">
+                  {stats.streak > 0 && <span className="text-orange-500 text-lg">&#128293;</span>}
+                  {stats.streak}
                 </div>
-                <a href="#" className="text-blue-600 font-medium inline-flex items-center hover:text-[#6b7d6a] transition-colors group/link">
-                  View Project
-                  <svg className="w-4 h-4 ml-1 group-hover/link:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
+                <div className="text-xs text-gray-600">Day Streak</div>
+              </div>
+              <div className="text-center p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-2xl font-bold text-[#4a5d49]">
+                  {stats.wordsLearned}<span className="text-gray-400 text-sm">/{stats.totalWords}</span>
+                </div>
+                <div className="text-xs text-gray-600">Words</div>
+              </div>
+              <div className="text-center p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-2xl font-bold text-[#4a5d49]">
+                  {stats.lessonsCompleted}<span className="text-gray-400 text-sm">/{stats.totalLessons}</span>
+                </div>
+                <div className="text-xs text-gray-600">Lessons</div>
+              </div>
+            </div>
+
+            <Link
+              href="/hebrew"
+              className="block w-full py-3 bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] text-white text-center font-semibold rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+            >
+              Go to Hebrew
+            </Link>
+          </div>
+
+          {/* Greek Card (Coming Soon) */}
+          <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 opacity-60">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-3xl text-gray-400">&#945;</span>
+              <div>
+                <h2 className="text-xl font-bold text-gray-400">Koine Greek</h2>
+                <p className="text-sm text-gray-400">Coming Soon</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="text-center p-3 bg-gray-100 rounded-xl">
+                <div className="text-2xl font-bold text-gray-400">-</div>
+                <div className="text-xs text-gray-400">Streak</div>
+              </div>
+              <div className="text-center p-3 bg-gray-100 rounded-xl">
+                <div className="text-2xl font-bold text-gray-400">-</div>
+                <div className="text-xs text-gray-400">Words</div>
+              </div>
+              <div className="text-center p-3 bg-gray-100 rounded-xl">
+                <div className="text-2xl font-bold text-gray-400">-</div>
+                <div className="text-xs text-gray-400">Lessons</div>
+              </div>
+            </div>
+
+            <div className="w-full py-3 bg-gray-200 text-gray-400 text-center font-semibold rounded-xl cursor-not-allowed">
+              Coming Soon
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 mb-8">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {currentLesson && (
+              <Link
+                href={`/hebrew/lessons/${currentLesson.id}`}
+                className="p-4 bg-gradient-to-br from-[#4a5d49] to-[#6b7d6a] rounded-xl text-center text-white hover:shadow-lg transition-all hover:scale-[1.02]"
+              >
+                <div className="text-2xl mb-2">&#128214;</div>
+                <div className="font-medium text-sm">
+                  {currentLesson.status === 'in_progress' ? 'Continue' : 'Start'} Week {currentLesson.weekNumber}
+                </div>
+              </Link>
+            )}
+            {stats.notLearned > 0 && (
+              <Link
+                href="/hebrew/vocabulary"
+                className="p-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl text-center text-white hover:shadow-lg transition-all hover:scale-[1.02]"
+              >
+                <div className="text-2xl mb-2">&#127183;</div>
+                <div className="font-medium text-sm">
+                  {stats.notLearned} Words to Learn
+                </div>
+              </Link>
+            )}
+            <Link
+              href="/hebrew/vocabulary"
+              className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors hover:scale-[1.02]"
+            >
+              <div className="text-2xl mb-2">&#128218;</div>
+              <div className="font-medium text-gray-800 text-sm">Vocabulary</div>
+            </Link>
+            <Link
+              href="/hebrew/bible"
+              className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors hover:scale-[1.02]"
+            >
+              <div className="text-2xl mb-2">&#128220;</div>
+              <div className="font-medium text-gray-800 text-sm">Bible Reader</div>
+            </Link>
+            <Link
+              href="/hebrew/lessons"
+              className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors hover:scale-[1.02]"
+            >
+              <div className="text-2xl mb-2">&#128209;</div>
+              <div className="font-medium text-gray-800 text-sm">All Lessons</div>
+            </Link>
+            {stats.lessonsCompleted >= 2 && (
+              <Link
+                href="/hebrew/review"
+                className="p-4 bg-[#f5f1e8] rounded-xl text-center hover:bg-[#e8dcc8] transition-colors hover:scale-[1.02]"
+              >
+                <div className="text-2xl mb-2">&#128221;</div>
+                <div className="font-medium text-gray-800 text-sm">Big Review</div>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Study Time */}
+        {timeStats && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Study Time</h2>
+            <div className="grid grid-cols-4 gap-4 text-center">
+              <div className="p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-xl font-bold text-[#4a5d49]">
+                  {formatTime(timeStats.day.minutes)}
+                </div>
+                <div className="text-xs text-gray-600">Today</div>
+              </div>
+              <div className="p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-xl font-bold text-[#4a5d49]">
+                  {formatTime(timeStats.week.minutes, timeStats.week.minutes >= 60 ? Math.floor(timeStats.week.minutes / 60) : undefined)}
+                </div>
+                <div className="text-xs text-gray-600">This Week</div>
+              </div>
+              <div className="p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-xl font-bold text-[#4a5d49]">
+                  {formatTime(timeStats.month.minutes, timeStats.month.hours)}
+                </div>
+                <div className="text-xs text-gray-600">This Month</div>
+              </div>
+              <div className="p-3 bg-[#f5f1e8] rounded-xl">
+                <div className="text-xl font-bold text-[#4a5d49]">
+                  {formatTime(timeStats.total.minutes, timeStats.total.hours)}
+                </div>
+                <div className="text-xs text-gray-600">All Time</div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Skills Section */}
-      <section className="py-24 bg-gradient-to-br from-white to-[#f5f1e8]">
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                Skills & Expertise
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600">
-              Technologies and methodologies I specialize in
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="group p-8 bg-white rounded-2xl text-center shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform">💻</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-[#4a5d49] transition-colors">Frontend</h3>
-              <p className="text-gray-600 text-sm">React, Next.js, TypeScript</p>
-            </div>
-            <div className="group p-8 bg-white rounded-2xl text-center shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform">🔧</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-[#6b7d6a] transition-colors">Backend</h3>
-              <p className="text-gray-600 text-sm">Node.js, Express, SQL</p>
-            </div>
-            <div className="group p-8 bg-white rounded-2xl text-center shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform">📱</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-[#6b7d6a] transition-colors">Mobile</h3>
-              <p className="text-gray-600 text-sm">React Native, Flutter</p>
-            </div>
-            <div className="group p-8 bg-white rounded-2xl text-center shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 hover:scale-105">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#6b7d6a] to-[#8a9a8a] rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 shadow-md group-hover:scale-110 transition-transform">☁️</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-[#6b7d6a] transition-colors">Cloud</h3>
-              <p className="text-gray-600 text-sm">AWS, Vercel, Docker</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-24 bg-white">
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] bg-clip-text text-transparent">
-                Let's Connect
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600">
-              Interested in working together? Feel free to reach out.
-            </p>
-          </div>
-          <div className="max-w-xl mx-auto bg-gradient-to-br from-[#f5f1e8] to-[#e8dcc8] rounded-2xl shadow-xl p-8 border border-[#d4c5b0]">
-            <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-6">
-              <a
-                href="#"
-                className="group flex items-center justify-center w-full md:w-auto px-6 py-3 bg-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 text-gray-800 hover:text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105"
-              >
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-                <span className="font-medium">GitHub</span>
-              </a>
-              <a
-                href="#"
-                className="group flex items-center justify-center w-full md:w-auto px-6 py-3 bg-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 text-gray-800 hover:text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105"
-              >
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-                <span className="font-medium">LinkedIn</span>
-              </a>
-              <a
-                href="#"
-                className="group flex items-center justify-center w-full md:w-auto px-6 py-3 bg-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 text-gray-800 hover:text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105"
-              >
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z"/>
-                  <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z"/>
-                </svg>
-                <span className="font-medium">Email</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="bg-gradient-to-r from-[#4a5d49] to-[#6b7d6a] py-12">
-        <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
-          <p className="text-center text-white font-medium">
-            © {new Date().getFullYear()} Kade Illian. All rights reserved.
-          </p>
-        </div>
-      </footer>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const hebrewNavItems = [
+  { label: "Hub", href: "/hebrew", exact: true },
+  { label: "Lessons", href: "/hebrew/lessons", exact: false },
+  { label: "Vocab", href: "/hebrew/vocabulary", exact: false },
+  { label: "Bible", href: "/hebrew/bible", exact: false },
+  { label: "Review", href: "/hebrew/review", exact: false },
+];
 
 interface Stats {
   streak: number;
@@ -19,6 +28,8 @@ interface TimeStats {
 }
 
 export default function HebrewStatsNavbar() {
+  const pathname = usePathname();
+
   // Timer state
   const [isRunning, setIsRunning] = useState(false);
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -362,6 +373,29 @@ export default function HebrewStatsNavbar() {
             )}
           </div>
         </div>
+
+        {/* Center: Navigation tabs */}
+        <nav className="hidden md:flex items-center gap-1">
+          {hebrewNavItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-1.5 text-sm rounded-full transition-all ${
+                  isActive
+                    ? "bg-white/60 text-[#4a5d49] font-semibold shadow-sm"
+                    : "text-gray-600 hover:text-[#4a5d49] hover:bg-white/40"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
         {/* Right side: Stats */}
         <div className="flex items-center gap-6 text-sm">
