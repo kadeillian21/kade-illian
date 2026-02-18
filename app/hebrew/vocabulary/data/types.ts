@@ -51,8 +51,8 @@ export interface HebrewVocabWord {
   cardType?: CardType;      // Type of card (vocabulary, alphabet, etc.)
   extraData?: ExtraData;    // Type-specific extra data
 
-  // Spaced repetition metadata (for localStorage tracking)
-  level?: number;           // 0=new, 1-5=review stages
+  // Spaced repetition metadata (from Postgres via API)
+  level?: number;           // 0=new, 1-6=review stages
   nextReview?: string;      // ISO date string for next review
   lastReviewed?: string;    // ISO date string of last review
   reviewCount?: number;     // Total number of times reviewed
@@ -91,13 +91,18 @@ export interface VocabGroup {
   suggestedDays?: number;   // Optional: suggested days to spend on this group
 }
 
-// User progress tracking (stored in localStorage)
+// User progress tracking (stored in Postgres, fetched via /api/vocab/progress)
 export interface UserProgress {
-  lastStudied: string;      // ISO date of last study session
-  totalReviews: number;     // Total review sessions completed
-  wordsLearned: number;     // Count of words at level 1+
-  wordsMastered: number;    // Count of words at level 5
-  streak: number;           // Current daily streak
+  stats: {
+    lastStudied: string;
+    totalReviews: number;
+    wordsLearned: number;
+    wordsMastered: number;
+    streak: number;
+    xp: number;
+    level: number;
+    cardsToday: number;
+  };
   wordProgress: {
     [wordId: string]: {
       level: number;

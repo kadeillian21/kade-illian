@@ -7,10 +7,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth';
 import { HebrewVocabWord, VocabGroup } from '@/app/hebrew/vocabulary/data/types';
 import { organizeVocabularyV2 } from '@/app/hebrew/vocabulary/utils/organizer-v2';
 
 export async function POST(request: NextRequest) {
+  const { user, error: authError } = await getAuthenticatedUser();
+  if (authError || !user) {
+    return unauthorizedResponse();
+  }
+
   const sql = getDb();
 
   try {

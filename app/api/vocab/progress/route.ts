@@ -83,6 +83,9 @@ export async function GET() {
         wordsLearned: stats.words_learned,
         wordsMastered: stats.words_mastered,
         streak: stats.streak,
+        xp: stats.xp || 0,
+        level: stats.level || 1,
+        cardsToday: stats.cards_today || 0,
       },
       wordProgress,
     });
